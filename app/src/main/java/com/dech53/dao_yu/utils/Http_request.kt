@@ -2,13 +2,9 @@ package com.dech53.dao_yu.utils
 
 import android.util.Log
 import com.dech53.dao_yu.static.Url
-import okhttp3.Call
-import okhttp3.Callback
 import okhttp3.CookieJar
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.Response
-import java.io.IOException
 import com.squareup.moshi.*
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import java.util.concurrent.TimeUnit
@@ -31,7 +27,7 @@ object Http_request {
         //create request
         val request = Request.Builder()
             .get()
-            .url(Url.API_BASE_URL + url)
+            .url(url)
             .build()
         //create call
         val call = client.newCall(request)

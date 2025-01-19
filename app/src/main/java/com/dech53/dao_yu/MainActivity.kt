@@ -3,9 +3,10 @@ package com.dech53.dao_yu
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -29,10 +30,23 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.dech53.dao_yu.component.MainButtonItems
+import com.dech53.dao_yu.component.PullToRefreshLazyColumn
+import com.dech53.dao_yu.views.SearchView
+import com.dech53.dao_yu.views.SettingsView
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -49,28 +63,56 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun Main_Page(padding: PaddingValues) {
     val dataState = remember { mutableStateOf<List<Thread>?>(null) }
+    var isRefreshing by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     LaunchedEffect(key1 = Unit) {
         var data = withContext(Dispatchers.IO) {
-            Http_request.get<Thread>("showf?id=53")
+            Http_request.get<Thread>("http://192.168.1.4:8080/json")
         }
         dataState.value = data
-
     }
-    LazyColumn(contentPadding = padding) {
-        items(dataState.value ?: emptyList()) { thread ->
-            Top_card(thread)
+    if (dataState.value == null) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(text = "加载中")
         }
+    } else {
+        PullToRefreshLazyColumn(
+            items = dataState.value!!,
+            lazyListState = rememberLazyListState(),
+            content = { item ->
+                Top_card(item)
+            },
+            isRefreshing = isRefreshing,
+            //refreshing method
+            onRefresh = {
+                scope.launch {
+                    isRefreshing = true
+                    val newData = withContext(Dispatchers.IO) {
+                        Http_request.get<Thread>("http://192.168.1.4:8080/json")
+                    }
+                    delay(2000L)
+                    dataState.value = newData
+                    isRefreshing = false
+                }
+            },
+            contentPadding = padding
+        )
     }
 }
 
 @Composable
 fun Main_Screen() {
     var selectedItemIndex by rememberSaveable { mutableStateOf(0) }
+    val navController = rememberNavController()
     Scaffold(
         topBar = {
             @OptIn(ExperimentalMaterial3Api::class)
             TopAppBar(
-                title = { Text(text = "岛语") },
+                modifier = Modifier.shadow(elevation = 10.dp),
+                title = { Text(text = "島語") },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainer,
                     titleContentColor = MaterialTheme.colorScheme.primary,
@@ -89,11 +131,13 @@ fun Main_Screen() {
         },
         bottomBar = {
             NavigationBar {
+
                 MainButtonItems.forEachIndexed { index, item ->
                     NavigationBarItem(
                         selected = selectedItemIndex == index,
                         onClick = {
                             selectedItemIndex = index
+                            navController.navigate(item.title)
                         },
                         label = {
                             Text(text = item.title)
@@ -115,6 +159,11 @@ fun Main_Screen() {
             }
         }
     ) { innerPadding ->
-        Main_Page(padding = innerPadding)
+        //navigation route
+        NavHost(navController = navController, startDestination = "主页") {
+            composable("主页") { Main_Page(padding = innerPadding) }
+            composable("设置") { SettingsView(padding = innerPadding) }
+            composable("搜索") { SearchView(padding = innerPadding) }
+        }
     }
 }
