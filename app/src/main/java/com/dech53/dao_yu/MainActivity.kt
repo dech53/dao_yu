@@ -3,6 +3,7 @@ package com.dech53.dao_yu
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -105,7 +106,9 @@ fun Main_Page(padding: PaddingValues) {
 
 @Composable
 fun Main_Screen() {
+    //change bottom Icon
     var selectedItemIndex by rememberSaveable { mutableStateOf(0) }
+    //navigation action
     val navController = rememberNavController()
     Scaffold(
         topBar = {
@@ -119,7 +122,7 @@ fun Main_Screen() {
                 ),
                 navigationIcon = {
                     IconButton(onClick = {
-
+                        //TODO change the request forum id
                     }) {
                         Icon(
                             imageVector = ImageVector.vectorResource(id = R.drawable.baseline_sync_alt_24),
@@ -131,7 +134,6 @@ fun Main_Screen() {
         },
         bottomBar = {
             NavigationBar {
-
                 MainButtonItems.forEachIndexed { index, item ->
                     NavigationBarItem(
                         selected = selectedItemIndex == index,
@@ -151,6 +153,7 @@ fun Main_Screen() {
                                 Icon(
                                     imageVector = if (selectedItemIndex == index) item.selectedIcon else item.unselectedIcon,
                                     contentDescription = item.title,
+                                    modifier = Modifier.animateContentSize()
                                 )
                             }
                         }

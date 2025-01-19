@@ -36,7 +36,6 @@ import com.dech53.dao_yu.static.Url
 fun Top_card(thread: Thread) {
     var isExpanded by remember { mutableStateOf(false) }
     var dateRegex = Regex(pattern = "[^\\(]*|(?<=\\))[^\\)]*")
-    val context = LocalContext.current
     var replace_ = Regex(pattern = "-")
     var date_ = replace_.replace(dateRegex.find(thread.now)!!.value, "/")
     var activePhotoUrl by remember { mutableStateOf<String?>(null) }

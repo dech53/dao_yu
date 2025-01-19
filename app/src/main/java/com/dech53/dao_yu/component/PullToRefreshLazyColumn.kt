@@ -2,7 +2,6 @@
 
 package com.dech53.dao_yu.component
 
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
