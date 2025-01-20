@@ -28,12 +28,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.rememberNavController
 import coil3.compose.AsyncImage
 import com.dech53.dao_yu.R
 import com.dech53.dao_yu.static.Url
 
 @Composable
-fun Top_card(thread: Thread) {
+fun Top_card(thread: Thread, clickAction:  () -> Unit) {
     var isExpanded by remember { mutableStateOf(false) }
     var dateRegex = Regex(pattern = "[^\\(]*|(?<=\\))[^\\)]*")
     var replace_ = Regex(pattern = "-")
@@ -88,8 +90,7 @@ fun Top_card(thread: Thread) {
                     contentDescription = "img from usr ${thread.user_hash}",
                     modifier = Modifier.clickable {
                         //zoom in the photo
-                        activePhotoUrl = Url.IMG_FULL_QA + thread.img + thread.ext
-
+                        clickAction()
                     }
                 )
                 if (activePhotoUrl != null) {

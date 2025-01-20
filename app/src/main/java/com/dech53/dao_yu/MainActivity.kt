@@ -38,11 +38,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.dech53.dao_yu.component.MainButtonItems
 import com.dech53.dao_yu.component.PullToRefreshLazyColumn
+import com.dech53.dao_yu.static.Url
+import com.dech53.dao_yu.views.ImageViewer
 import com.dech53.dao_yu.views.SearchView
 import com.dech53.dao_yu.views.SettingsView
 import kotlinx.coroutines.delay
@@ -62,10 +65,11 @@ class MainActivity : ComponentActivity() {
 
 
 @Composable
-fun Main_Page(padding: PaddingValues) {
+fun Main_Page(padding: PaddingValues, navController: NavController) {
     val dataState = remember { mutableStateOf<List<Thread>?>(null) }
     var isRefreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+
     LaunchedEffect(key1 = Unit) {
         var data = withContext(Dispatchers.IO) {
             Http_request.get<Thread>("http://192.168.1.4:8080/json")
@@ -84,7 +88,10 @@ fun Main_Page(padding: PaddingValues) {
             items = dataState.value!!,
             lazyListState = rememberLazyListState(),
             content = { item ->
-                Top_card(item)
+                Top_card(item, clickAction = {
+                    var img_Loaction = Regex(pattern = "/").replace(item.img!!,"&") + item.ext
+                    navController.navigate("图片浏览/${img_Loaction}")
+                })
             },
             isRefreshing = isRefreshing,
             //refreshing method
@@ -164,9 +171,13 @@ fun Main_Screen() {
     ) { innerPadding ->
         //navigation route
         NavHost(navController = navController, startDestination = "主页") {
-            composable("主页") { Main_Page(padding = innerPadding) }
+            composable("主页") { Main_Page(padding = innerPadding, navController = navController) }
             composable("设置") { SettingsView(padding = innerPadding) }
             composable("搜索") { SearchView(padding = innerPadding) }
+            composable("图片浏览/{imgName}") { navBackStackEntry ->
+                val imgName = navBackStackEntry.arguments?.getString("imgName") ?: ""
+                ImageViewer(paddingValues = innerPadding, img_Location = imgName)
+            }
         }
     }
 }
