@@ -1,9 +1,7 @@
 package com.dech53.dao_yu.component
 
-import android.content.Intent
-import android.util.Log
-
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,13 +24,9 @@ import com.dech53.dao_yu.models.Thread
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.rememberNavController
 import coil3.compose.AsyncImage
 import com.dech53.dao_yu.R
-import com.dech53.dao_yu.static.Url
 
 @Composable
 fun Top_card(thread: Thread, clickAction:  () -> Unit) {
@@ -41,6 +35,7 @@ fun Top_card(thread: Thread, clickAction:  () -> Unit) {
     var replace_ = Regex(pattern = "-")
     var date_ = replace_.replace(dateRegex.find(thread.now)!!.value, "/")
     var activePhotoUrl by remember { mutableStateOf<String?>(null) }
+    val interactionSource = remember { MutableInteractionSource() }
     Surface(
         shape = MaterialTheme.shapes.small,
         color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -88,7 +83,7 @@ fun Top_card(thread: Thread, clickAction:  () -> Unit) {
                 AsyncImage(
                     model = "https://image.nmb.best/thumb/" + thread.img + thread.ext,
                     contentDescription = "img from usr ${thread.user_hash}",
-                    modifier = Modifier.clickable {
+                    modifier = Modifier.clickable (indication = null, interactionSource = interactionSource){
                         //zoom in the photo
                         clickAction()
                     }

@@ -36,7 +36,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
@@ -44,7 +43,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.dech53.dao_yu.component.MainButtonItems
 import com.dech53.dao_yu.component.PullToRefreshLazyColumn
-import com.dech53.dao_yu.static.Url
 import com.dech53.dao_yu.views.ImageViewer
 import com.dech53.dao_yu.views.SearchView
 import com.dech53.dao_yu.views.SettingsView
@@ -89,8 +87,7 @@ fun Main_Page(padding: PaddingValues, navController: NavController) {
             lazyListState = rememberLazyListState(),
             content = { item ->
                 Top_card(item, clickAction = {
-                    var img_Loaction = Regex(pattern = "/").replace(item.img!!,"&") + item.ext
-                    navController.navigate("图片浏览/${img_Loaction}")
+                    navController.navigate("图片浏览/${Regex(pattern = "/").replace(item.img!!, "&") + item.ext}")
                 })
             },
             isRefreshing = isRefreshing,
@@ -176,7 +173,9 @@ fun Main_Screen() {
             composable("搜索") { SearchView(padding = innerPadding) }
             composable("图片浏览/{imgName}") { navBackStackEntry ->
                 val imgName = navBackStackEntry.arguments?.getString("imgName") ?: ""
-                ImageViewer(paddingValues = innerPadding, img_Location = imgName)
+                ImageViewer(paddingValues = innerPadding, img_Location = imgName, onBack = {
+                    navController.popBackStack()
+                })
             }
         }
     }

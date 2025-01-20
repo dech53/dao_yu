@@ -1,7 +1,6 @@
 package com.dech53.dao_yu.utils
 
 import android.util.Log
-import com.dech53.dao_yu.static.Url
 import okhttp3.CookieJar
 import okhttp3.OkHttpClient
 import okhttp3.Request
