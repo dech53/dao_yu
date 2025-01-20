@@ -3,6 +3,7 @@ package com.dech53.dao_yu
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -43,6 +44,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.dech53.dao_yu.component.MainButtonItems
 import com.dech53.dao_yu.component.PullToRefreshLazyColumn
+import com.dech53.dao_yu.viewmodels.MainPage_ViewModel
 import com.dech53.dao_yu.views.ImageViewer
 import com.dech53.dao_yu.views.SearchView
 import com.dech53.dao_yu.views.SettingsView
@@ -51,11 +53,12 @@ import kotlinx.coroutines.launch
 
 
 class MainActivity : ComponentActivity() {
+    private val viewModel: MainPage_ViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             Dao_yuTheme {
-                Main_Screen()
+                Main_Screen(viewModel)
             }
         }
     }
@@ -63,18 +66,15 @@ class MainActivity : ComponentActivity() {
 
 
 @Composable
-fun Main_Page(padding: PaddingValues, navController: NavController) {
-    val dataState = remember { mutableStateOf<List<Thread>?>(null) }
-    var isRefreshing by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
+fun Main_Page(padding: PaddingValues, navController: NavController, viewModel: MainPage_ViewModel) {
+    //TODO redo http request bug
+    val dataState by viewModel.dataState
+    val isRefreshing by remember { viewModel.isRefreshing }
 
-    LaunchedEffect(key1 = Unit) {
-        var data = withContext(Dispatchers.IO) {
-            Http_request.get<Thread>("http://192.168.1.4:8080/json")
-        }
-        dataState.value = data
+    LaunchedEffect(Unit) {
+        viewModel.loadData()
     }
-    if (dataState.value == null) {
+    if (dataState == null) {
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center,
@@ -83,25 +83,24 @@ fun Main_Page(padding: PaddingValues, navController: NavController) {
         }
     } else {
         PullToRefreshLazyColumn(
-            items = dataState.value!!,
+            items = dataState!!,
             lazyListState = rememberLazyListState(),
             content = { item ->
                 Top_card(item, clickAction = {
-                    navController.navigate("图片浏览/${Regex(pattern = "/").replace(item.img!!, "&") + item.ext}")
+                    navController.navigate(
+                        "图片浏览/${
+                            Regex(pattern = "/").replace(
+                                item.img!!,
+                                "&"
+                            ) + item.ext
+                        }"
+                    )
                 })
             },
             isRefreshing = isRefreshing,
             //refreshing method
             onRefresh = {
-                scope.launch {
-                    isRefreshing = true
-                    val newData = withContext(Dispatchers.IO) {
-                        Http_request.get<Thread>("http://192.168.1.4:8080/json")
-                    }
-                    delay(2000L)
-                    dataState.value = newData
-                    isRefreshing = false
-                }
+                viewModel.refreshData()
             },
             contentPadding = padding
         )
@@ -109,7 +108,7 @@ fun Main_Page(padding: PaddingValues, navController: NavController) {
 }
 
 @Composable
-fun Main_Screen() {
+fun Main_Screen(viewModel: MainPage_ViewModel) {
     //change bottom Icon
     var selectedItemIndex by rememberSaveable { mutableStateOf(0) }
     //navigation action
@@ -168,7 +167,13 @@ fun Main_Screen() {
     ) { innerPadding ->
         //navigation route
         NavHost(navController = navController, startDestination = "主页") {
-            composable("主页") { Main_Page(padding = innerPadding, navController = navController) }
+            composable("主页") {
+                Main_Page(
+                    padding = innerPadding,
+                    navController = navController,
+                    viewModel = viewModel
+                )
+            }
             composable("设置") { SettingsView(padding = innerPadding) }
             composable("搜索") { SearchView(padding = innerPadding) }
             composable("图片浏览/{imgName}") { navBackStackEntry ->
