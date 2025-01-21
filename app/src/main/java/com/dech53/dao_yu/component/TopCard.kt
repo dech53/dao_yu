@@ -24,12 +24,13 @@ import com.dech53.dao_yu.models.Thread
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
 import coil3.compose.AsyncImage
 import com.dech53.dao_yu.R
 
 @Composable
-fun Top_card(thread: Thread, clickAction:  () -> Unit) {
+fun Top_card(thread: Thread, clickAction: () -> Unit) {
     var isExpanded by remember { mutableStateOf(false) }
     var dateRegex = Regex(pattern = "[^\\(]*|(?<=\\))[^\\)]*")
     var replace_ = Regex(pattern = "-")
@@ -78,15 +79,20 @@ fun Top_card(thread: Thread, clickAction:  () -> Unit) {
             }
             //make the html code show in the card component
             HtmlText(htmlContent = thread.content, maxLines = 6)
-            if (thread.img != null) {
+            if (thread.img != "") {
                 //TODO Add click action on img
                 AsyncImage(
                     model = "https://image.nmb.best/thumb/" + thread.img + thread.ext,
                     contentDescription = "img from usr ${thread.user_hash}",
-                    modifier = Modifier.clickable (indication = null, interactionSource = interactionSource){
+                    modifier = Modifier.clickable(
+                        indication = null,
+                        interactionSource = interactionSource
+                    ) {
                         //zoom in the photo
                         clickAction()
-                    }
+                    },
+                    //placeholder mean phtoto is not completely loaded
+                    placeholder = painterResource(id = R.drawable.apple_touch_icon)
                 )
                 if (activePhotoUrl != null) {
 

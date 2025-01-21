@@ -1,5 +1,6 @@
 package com.dech53.dao_yu.views
 
+import android.content.Intent
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -60,6 +61,18 @@ fun ImageViewer(img_Location: String = "", paddingValues: PaddingValues, onBack:
             title = "分享",
             color = Color.Black,
             clickAction = {
+                //TODO Add share method to transport arguments between screens
+                val sendIntent: Intent = Intent().apply {
+                    action = Intent.ACTION_SEND
+                    putExtra(
+                        Intent.EXTRA_TEXT,
+                        Url.IMG_FULL_QA + Regex(pattern = "&").replace(img_Location, "/")
+                    )
+                    flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    type = "text/plain"
+                }
+                val shareIntent = Intent.createChooser(sendIntent, null)
+                context.startActivity(shareIntent)
                 isInfoDialogVisible = false
             }),
     )

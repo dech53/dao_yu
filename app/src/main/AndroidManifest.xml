@@ -10,14 +10,13 @@
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
-        android:icon="@drawable/icons8_x_100"
+        android:icon="@drawable/ic_forward"
         android:label="@string/app_name"
-        android:roundIcon="@drawable/icons8_x_100"
+        android:roundIcon="@drawable/ic_forward"
         android:supportsRtl="true"
         android:theme="@style/Theme.Dao_yu"
         android:usesCleartextTraffic="true"
         tools:targetApi="31">
-
         <activity
             android:name=".MainActivity"
             android:exported="true"

@@ -9,36 +9,53 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.dech53.dao_yu.models.*
-import kotlinx.coroutines.delay
 
-class MainPage_ViewModel:ViewModel(){
+class MainPage_ViewModel : ViewModel() {
     private val _dataState = mutableStateOf<List<Thread>?>(null)
     val dataState: State<List<Thread>?> = _dataState
 
     var isRefreshing = mutableStateOf(false)
         private set
 
-    // 初始化数据
+    //TODO add dialog to change page id
+    var forumId = mutableStateOf("53")
+        private set
+
+//    var isChangeForumIdDialogVisible = mutableStateOf(false)
+//        private set
+
+    // initial request
     fun loadData() {
         viewModelScope.launch {
-            if (_dataState.value == null) { // 避免重复请求
+            if (_dataState.value == null) {
                 val data = withContext(Dispatchers.IO) {
-                    Http_request.get<Thread>("http://192.168.1.4:8080/json")
+                    Http_request.get<Thread>("showf?id=${forumId.value}")
                 }
                 _dataState.value = data
             }
         }
     }
 
-    // 刷新数据
+    // refresh data
     fun refreshData() {
         viewModelScope.launch {
             isRefreshing.value = true
             val newData = withContext(Dispatchers.IO) {
-                Http_request.get<Thread>("http://192.168.1.4:8080/json")
+                Http_request.get<Thread>("showf?id=${forumId.value}")
             }
             _dataState.value = newData
             isRefreshing.value = false
         }
     }
+
+    fun changeForumId(id: String) {
+        if (forumId.value != id) {
+            forumId.value = id
+            refreshData()
+        }
+    }
+
+//    fun changeForumIdDialogVisible() {
+//        isChangeForumIdDialogVisible.value = !isChangeForumIdDialogVisible.value
+//    }
 }

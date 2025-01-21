@@ -1,6 +1,7 @@
 package com.dech53.dao_yu.utils
 
 import android.util.Log
+import com.dech53.dao_yu.static.Url
 import okhttp3.CookieJar
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -26,7 +27,7 @@ object Http_request {
         //create request
         val request = Request.Builder()
             .get()
-            .url(url)
+            .url(Url.API_BASE_URL + url)
             .build()
         //create call
         val call = client.newCall(request)
