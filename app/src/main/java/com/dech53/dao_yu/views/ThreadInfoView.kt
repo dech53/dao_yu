@@ -32,7 +32,7 @@ fun ThreadInfoView(
             viewModel.clearThreadInfo()
             viewModel.getThreadId(threadId)
         } else {
-            if (threadId != threadInfo!!.id.toString()) {
+            if (threadId != threadInfo!!.first().id.toString()) {
                 viewModel.clearThreadInfo()
                 viewModel.getThreadId(threadId)
             }
@@ -52,7 +52,10 @@ fun ThreadInfoView(
                 navController = navController,
                 lazyListState = rememberLazyListState(),
                 onRefresh = { viewModel.refreshData() },
-                isRefreshing = isRefreshing
+                isRefreshing = isRefreshing,
+                loadMore = {
+                    viewModel.loadMore()
+                }
             )
         }
     }

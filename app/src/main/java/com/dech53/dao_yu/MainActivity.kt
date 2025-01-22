@@ -1,6 +1,7 @@
 package com.dech53.dao_yu
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -84,7 +85,7 @@ class MainActivity : ComponentActivity() {
 fun Main_Page(padding: PaddingValues, navController: NavController, viewModel: MainPage_ViewModel) {
     val dataState by viewModel.dataState
     val isRefreshing by remember { viewModel.isRefreshing }
-
+    val lazyListState = rememberLazyListState()
     LaunchedEffect(Unit) {
         viewModel.loadData()
     }
@@ -99,7 +100,7 @@ fun Main_Page(padding: PaddingValues, navController: NavController, viewModel: M
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
             PullToRefreshLazyColumn(
                 items = dataState!!,
-                lazyListState = rememberLazyListState(),
+                lazyListState = lazyListState,
                 content = { item ->
                     Forum_card(item, imgClickAction = {
                         navController.navigate(
@@ -121,7 +122,10 @@ fun Main_Page(padding: PaddingValues, navController: NavController, viewModel: M
                 onRefresh = {
                     viewModel.refreshData()
                 },
-                contentPadding = padding
+                contentPadding = padding,
+                loadMore = {
+                    viewModel.loadMore()
+                }
             )
 //            if (viewModel.isChangeForumIdDialogVisible.value) {
 //                ForumCategoryDialog(forumCategory = forumCategories, viewModel = viewModel)

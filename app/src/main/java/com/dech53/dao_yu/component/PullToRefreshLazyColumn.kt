@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshContainer
@@ -26,7 +27,8 @@ fun <T> PullToRefreshLazyColumn(
     content: @Composable (T) -> Unit,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
-    contentPadding: PaddingValues
+    contentPadding: PaddingValues,
+    loadMore: () -> Unit
 ) {
     val pullToRefreshState = rememberPullToRefreshState()
     Box(
@@ -37,7 +39,14 @@ fun <T> PullToRefreshLazyColumn(
         LazyColumn(
             state = lazyListState,
         ) {
-            items(items) { item -> content(item) }
+            itemsIndexed(items) { index, item ->
+                content(item)
+                LaunchedEffect(lazyListState.layoutInfo.totalItemsCount) {
+                    if (index == lazyListState.layoutInfo.totalItemsCount - 1) {
+                        loadMore()
+                    }
+                }
+            }
         }
 
         if (pullToRefreshState.isRefreshing) {

@@ -35,3 +35,7 @@ fun Thread.toReply(): Reply {
         Hide = this.Hide
     )
 }
+
+fun Thread.toReplies():List<Reply>{
+    return listOf(this.toReply()) + this.Replies
+}

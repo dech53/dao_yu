@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -42,14 +43,14 @@ import com.dech53.dao_yu.R
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TRCard(
-    item: Thread,
+    item: List<Reply>,
     navController: NavController,
     lazyListState: LazyListState = rememberLazyListState(),
     onRefresh: () -> Unit,
-    isRefreshing: Boolean
+    isRefreshing: Boolean,
+    loadMore: () -> Unit
 ) {
-    val poster = item.user_hash
-    val replyList = listOf(item.toReply()) + item.Replies
+    val poster = item[0].user_hash
     val pullToRefreshState = rememberPullToRefreshState()
     Box(
         contentAlignment = Alignment.TopCenter,
@@ -58,7 +59,7 @@ fun TRCard(
             .nestedScroll(pullToRefreshState.nestedScrollConnection)
     ) {
         LazyColumn(state = lazyListState) {
-            items(replyList) { reply ->
+            itemsIndexed(item) { index, reply ->
                 ReplyCard(reply, poster, imgClickAction = {
                     navController.navigate(
                         "图片浏览/${
@@ -69,6 +70,11 @@ fun TRCard(
                         }"
                     )
                 })
+                LaunchedEffect(lazyListState.layoutInfo.totalItemsCount) {
+                    if (index == lazyListState.layoutInfo.totalItemsCount - 1) {
+                        loadMore()
+                    }
+                }
             }
         }
         if (pullToRefreshState.isRefreshing) {
