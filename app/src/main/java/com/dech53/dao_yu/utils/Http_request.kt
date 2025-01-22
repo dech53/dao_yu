@@ -1,6 +1,7 @@
 package com.dech53.dao_yu.utils
 
 import android.util.Log
+import com.dech53.dao_yu.models.Thread
 import com.dech53.dao_yu.static.Url
 import okhttp3.CookieJar
 import okhttp3.OkHttpClient
@@ -22,8 +23,6 @@ object Http_request {
         val type = Types.newParameterizedType(List::class.java, T::class.java)
         //define adapter
         val adapter = moshi.adapter<List<T>>(type)
-
-        var data: List<T>? = null
         //create request
         val request = Request.Builder()
             .get()
@@ -50,6 +49,22 @@ object Http_request {
 //
 //            }
 //        })
+        val response = call.execute()
+        val responseBody = response.body?.string() ?: ""
+        Log.d("request data", responseBody)
+        //body process
+        return adapter.fromJson(responseBody)
+    }
+
+
+    //Thread info get method
+    fun getThreadInfo(url: String): Thread? {
+        val adapter = moshi.adapter<Thread>(Thread::class.java)
+        val request = Request.Builder()
+            .get()
+            .url(Url.API_BASE_URL + url)
+            .build()
+        val call = client.newCall(request)
         val response = call.execute()
         val responseBody = response.body?.string() ?: ""
         Log.d("request data", responseBody)

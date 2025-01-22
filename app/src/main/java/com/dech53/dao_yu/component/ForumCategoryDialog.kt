@@ -42,7 +42,7 @@ import com.dech53.dao_yu.R.drawable
 fun ForumCategoryDialog(
     forumCategory: List<ForumCategory>,
     viewModel: MainPage_ViewModel,
-    changeDrawerState: () -> Unit
+    changeDrawerState: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -81,7 +81,8 @@ fun ExpandableCategory(
                 .background(
                     color = MaterialTheme.colorScheme.surface,
                     shape = MaterialTheme.shapes.medium
-                ).clickable(indication = null, interactionSource = interactionSource) {
+                )
+                .clickable(indication = null, interactionSource = interactionSource) {
                     isExpanded = !isExpanded
                 }
         ) {
@@ -129,6 +130,7 @@ fun ExpandableCategory(
                             .clickable {
                                 isExpanded = !isExpanded
                                 viewModel.changeForumId(forum.id)
+                                viewModel.changeTitle(forum.name)
                                 changeDrawerState()
                             },
                         colors = CardDefaults.cardColors(

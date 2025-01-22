@@ -14,6 +14,9 @@ class MainPage_ViewModel : ViewModel() {
     private val _dataState = mutableStateOf<List<Thread>?>(null)
     val dataState: State<List<Thread>?> = _dataState
 
+    var pageId = mutableStateOf("1")
+        private set
+
     var isRefreshing = mutableStateOf(false)
         private set
 
@@ -21,8 +24,19 @@ class MainPage_ViewModel : ViewModel() {
     var forumId = mutableStateOf("53")
         private set
 
+    var title = mutableStateOf("婆罗门一")
+        private set
+
+    var topBarState = mutableStateOf(false)
+        private set
+
 //    var isChangeForumIdDialogVisible = mutableStateOf(false)
 //        private set
+
+    fun changeTopBarState(state: Boolean) {
+        if (topBarState.value != state)
+            topBarState.value = state
+    }
 
     // initial request
     fun loadData() {
@@ -55,7 +69,21 @@ class MainPage_ViewModel : ViewModel() {
         }
     }
 
+    fun changeTitle(t: String) {
+        if (title.value != t) {
+            title.value = t
+        }
+    }
+
 //    fun changeForumIdDialogVisible() {
 //        isChangeForumIdDialogVisible.value = !isChangeForumIdDialogVisible.value
 //    }
+
+    fun loadMore() {
+
+    }
+
+    fun resetPageId() {
+        pageId.value = "1"
+    }
 }

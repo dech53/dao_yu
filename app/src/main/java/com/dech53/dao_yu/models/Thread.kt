@@ -17,3 +17,21 @@ data class Thread(
     val Replies: List<Reply>,
     val RemainReplies: Int?
 )
+
+fun Thread.toReply(): Reply {
+    return Reply(
+        id = this.id,
+        fid = this.fid,
+        ReplyCount = this.ReplyCount,
+        img = this.img ?: "",
+        ext = this.ext ?: "",
+        now = this.now,
+        user_hash = this.user_hash,
+        name = this.name,
+        title = this.title,
+        content = this.content,
+        sage = this.sage,
+        admin = this.admin,
+        Hide = this.Hide
+    )
+}

@@ -1,11 +1,17 @@
 package com.dech53.dao_yu
 
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,7 +29,6 @@ import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -33,15 +38,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import com.dech53.dao_yu.component.Top_card
+import com.dech53.dao_yu.component.Forum_card
 import com.dech53.dao_yu.ui.theme.Dao_yuTheme
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -53,18 +58,22 @@ import com.dech53.dao_yu.component.MainButtonItems
 import com.dech53.dao_yu.component.PullToRefreshLazyColumn
 import com.dech53.dao_yu.static.forumCategories
 import com.dech53.dao_yu.viewmodels.MainPage_ViewModel
+import com.dech53.dao_yu.viewmodels.ThreadInfoView_ViewModel
 import com.dech53.dao_yu.views.ImageViewer
 import com.dech53.dao_yu.views.SearchView
 import com.dech53.dao_yu.views.SettingsView
+import com.dech53.dao_yu.views.ThreadInfoView
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private val viewModel: MainPage_ViewModel by viewModels()
+    private val ThreadviewModel: ThreadInfoView_ViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         setContent {
             Dao_yuTheme {
-                Main_Screen(viewModel)
+                Main_Screen(viewModel, ThreadviewModel)
             }
         }
     }
@@ -75,6 +84,7 @@ class MainActivity : ComponentActivity() {
 fun Main_Page(padding: PaddingValues, navController: NavController, viewModel: MainPage_ViewModel) {
     val dataState by viewModel.dataState
     val isRefreshing by remember { viewModel.isRefreshing }
+
     LaunchedEffect(Unit) {
         viewModel.loadData()
     }
@@ -91,7 +101,7 @@ fun Main_Page(padding: PaddingValues, navController: NavController, viewModel: M
                 items = dataState!!,
                 lazyListState = rememberLazyListState(),
                 content = { item ->
-                    Top_card(item, clickAction = {
+                    Forum_card(item, imgClickAction = {
                         navController.navigate(
                             "图片浏览/${
                                 Regex(pattern = "/").replace(
@@ -100,7 +110,11 @@ fun Main_Page(padding: PaddingValues, navController: NavController, viewModel: M
                                 ) + item.ext
                             }"
                         )
-                    })
+                    }, cardClickAction = {
+                        navController.navigate("串详情/${item.id}")
+                        viewModel.changeTopBarState(true)
+                        viewModel.changeTitle("No." + item.id.toString())
+                    }, stricted = true, posterName = "")
                 },
                 isRefreshing = isRefreshing,
                 //refreshing method
@@ -117,13 +131,19 @@ fun Main_Page(padding: PaddingValues, navController: NavController, viewModel: M
 }
 
 @Composable
-fun Main_Screen(viewModel: MainPage_ViewModel) {
+fun Main_Screen(viewModel: MainPage_ViewModel, ThreadviewModel: ThreadInfoView_ViewModel) {
     //change bottom Icon
     var selectedItemIndex by rememberSaveable { mutableStateOf(0) }
     //navigation action
     val navController = rememberNavController()
 
+    val title by remember { viewModel.title }
+
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+
+    var topBarState by remember { viewModel.topBarState }
+
+    val nowForumId by remember { viewModel.forumId }
 
     val scope = rememberCoroutineScope()
     ModalNavigationDrawer(
@@ -137,6 +157,13 @@ fun Main_Screen(viewModel: MainPage_ViewModel) {
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(10.dp)
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.tertiaryContainer,
+                            shape = MaterialTheme.shapes.medium
+                        )
+                        .clip(MaterialTheme.shapes.medium)
+
                 ) {
                     ForumCategoryDialog(
                         forumCategory = forumCategories,
@@ -157,7 +184,7 @@ fun Main_Screen(viewModel: MainPage_ViewModel) {
                 @OptIn(ExperimentalMaterial3Api::class)
                 TopAppBar(
                     modifier = Modifier.shadow(elevation = 10.dp),
-                    title = { Text(text = "島語") },
+                    title = { Text(text = title) },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainer,
                         titleContentColor = MaterialTheme.colorScheme.primary,
@@ -165,15 +192,21 @@ fun Main_Screen(viewModel: MainPage_ViewModel) {
                     navigationIcon = {
                         IconButton(onClick = {
                             //TODO change the request forum id
-//                        viewModel.changeForumIdDialogVisible()
-                            scope.launch {
+                            if (!topBarState) (scope.launch {
                                 drawerState.apply {
                                     if (isClosed) open() else close()
                                 }
-                            }
+                            }) else (scope.launch {
+                                navController.popBackStack()
+                                viewModel.changeTitle(forumCategories.flatMap { it.forums }
+                                    .find { it.id == nowForumId }!!.name)
+                                viewModel.changeTopBarState(false)
+                            })
                         }) {
                             Icon(
-                                imageVector = ImageVector.vectorResource(id = R.drawable.baseline_sync_alt_24),
+                                imageVector = if (!topBarState) ImageVector.vectorResource(id = R.drawable.baseline_sync_alt_24) else ImageVector.vectorResource(
+                                    id = R.drawable.baseline_arrow_back_24
+                                ),
                                 contentDescription = "Back",
                             )
                         }
@@ -188,6 +221,9 @@ fun Main_Screen(viewModel: MainPage_ViewModel) {
                             onClick = {
                                 selectedItemIndex = index
                                 navController.navigate(item.title)
+                                viewModel.changeTitle(forumCategories.flatMap { it.forums }
+                                    .find { it.id == nowForumId }!!.name)
+                                viewModel.changeTopBarState(false)
                             },
                             label = {
                                 Text(text = item.title)
@@ -211,7 +247,13 @@ fun Main_Screen(viewModel: MainPage_ViewModel) {
             }
         ) { innerPadding ->
             //navigation route
-            NavHost(navController = navController, startDestination = "主页") {
+            NavHost(navController = navController, enterTransition = {
+                fadeIn(
+                    tween(durationMillis = 300)
+                )
+            }, exitTransition = {
+                fadeOut(tween(durationMillis = 300))
+            }, startDestination = "主页") {
                 composable("主页") {
                     Main_Page(
                         padding = innerPadding,
@@ -227,9 +269,16 @@ fun Main_Screen(viewModel: MainPage_ViewModel) {
                         navController.popBackStack()
                     })
                 }
+                composable("串详情/{id}") { navBackStackEntry ->
+                    val threadId = navBackStackEntry.arguments?.getString("id") ?: ""
+                    ThreadInfoView(
+                        threadId = threadId,
+                        paddingValues = innerPadding,
+                        viewModel = ThreadviewModel,
+                        navController = navController
+                    )
+                }
             }
         }
     }
-
-
 }
