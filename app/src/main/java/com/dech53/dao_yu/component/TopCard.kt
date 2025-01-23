@@ -80,7 +80,7 @@ fun Forum_card(
                             modifier = Modifier.size(15.dp)
                         )
                         Text(
-                            text = if (thread.RemainReplies == null) "0" else thread.RemainReplies.toString(),
+                            text = thread.ReplyCount.toString(),
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp,
                         )

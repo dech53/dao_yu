@@ -2,13 +2,11 @@ package com.dech53.dao_yu.viewmodels
 
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
-import com.dech53.dao_yu.models.Thread
 import androidx.compose.runtime.State
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dech53.dao_yu.models.Reply
 import com.dech53.dao_yu.models.toReplies
-import com.dech53.dao_yu.models.toReply
 import com.dech53.dao_yu.utils.Http_request
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -27,6 +25,18 @@ class ThreadInfoView_ViewModel : ViewModel() {
     var threadId = mutableStateOf("")
         private set
 
+    var isIndicatorVisible = mutableStateOf(false)
+        private set
+
+    var canUseRequest = mutableStateOf(true)
+        private set
+
+    var replyCount = mutableStateOf(0)
+        private set
+
+    var maxPage = mutableStateOf(0)
+        private set
+
     fun refreshData() {
         viewModelScope.launch {
             isRefreshing.value = true
@@ -34,6 +44,10 @@ class ThreadInfoView_ViewModel : ViewModel() {
             val newData = withContext(Dispatchers.IO) {
                 Http_request.getThreadInfo("thread?id=${threadId.value}")
             }
+            replyCount.value = newData!!.ReplyCount
+            maxPage.value =
+                if (replyCount.value % 20 == 0) replyCount.value / 20 else replyCount.value / 20 + 1
+            Log.d("能加载的最多页数",maxPage.value.toString())
             _threadInfo.value = newData!!.toReplies()
             isRefreshing.value = false
         }
@@ -49,18 +63,37 @@ class ThreadInfoView_ViewModel : ViewModel() {
     }
 
     fun loadMore() {
-        Log.d("加载第${pageId.value}测试", "触发")
-        viewModelScope.launch {
-            pageId.value++
-            val newData = withContext(Dispatchers.IO) {
-                Http_request.getThreadInfo("thread?id=${threadId.value}&page=${pageId.value}")
+        if (pageId.value > maxPage.value) canUseRequest.value = false
+        if (canUseRequest.value) {
+            Log.d("thread_page加载第${pageId.value}测试", "触发")
+            isIndicatorVisible.value = true
+            viewModelScope.launch {
+                pageId.value++
+                val newData = withContext(Dispatchers.IO) {
+                    Http_request.getThreadInfo("thread?id=${threadId.value}&page=${pageId.value}")
+                }
+                Log.d("新获取的数据", newData!!.toReplies().drop(1).size.toString())
+                _threadInfo.value = (_threadInfo.value.orEmpty() + newData!!.toReplies().drop(1))
             }
-
-            _threadInfo.value = (_threadInfo.value.orEmpty() + newData!!.toReplies().drop(1))
+            isIndicatorVisible.value = false
+        } else {
+            Log.d("thread_page加载第${pageId.value}测试", "未触发")
         }
+
     }
 
     fun resetPageId() {
         pageId.value = 1
+    }
+
+    fun resetAll(){
+        _threadInfo.value = null
+        threadId.value = ""
+        pageId.value = 1
+        isRefreshing.value = false
+        isIndicatorVisible.value = false
+        canUseRequest.value = true
+        replyCount.value = 0
+        maxPage.value = 0
     }
 }

@@ -10,11 +10,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -27,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -48,7 +51,8 @@ fun TRCard(
     lazyListState: LazyListState = rememberLazyListState(),
     onRefresh: () -> Unit,
     isRefreshing: Boolean,
-    loadMore: () -> Unit
+    loadMore: () -> Unit,
+    isIndicatorVisible: Boolean
 ) {
     val poster = item[0].user_hash
     val pullToRefreshState = rememberPullToRefreshState()
@@ -70,19 +74,30 @@ fun TRCard(
                         }"
                     )
                 })
-                LaunchedEffect(lazyListState.layoutInfo.totalItemsCount) {
+                //load more data when scroll to the bottom
+                LaunchedEffect(Unit) {
                     if (index == lazyListState.layoutInfo.totalItemsCount - 1) {
                         loadMore()
                     }
                 }
             }
+            //圆形进度条
+//            item {
+//                if (isIndicatorVisible) {
+//                    CircularProgressIndicator(
+//                        modifier = Modifier.width(10.dp),
+//                        color = MaterialTheme.colorScheme.primary,
+//                        trackColor = MaterialTheme.colorScheme.surfaceVariant
+//                    )
+//                }
+//            }
         }
         if (pullToRefreshState.isRefreshing) {
             LaunchedEffect(true) {
                 onRefresh()
             }
         }
-
+        //same logistic
         LaunchedEffect(isRefreshing) {
             if (isRefreshing) {
                 pullToRefreshState.startRefresh()
@@ -121,7 +136,12 @@ fun ReplyCard(reply: Reply, posterName: String, imgClickAction: () -> Unit) {
                 ) {
                     Row {
                         if ((posterName == reply.user_hash))
-                            Text("Poster", fontWeight = FontWeight.W500, fontSize = 11.sp)
+                            Text(
+                                "Poster",
+                                fontWeight = FontWeight.W500,
+                                fontSize = 11.sp,
+                                color = Color.Red
+                            )
                         Spacer(modifier = Modifier.padding(3.dp))
                         Text(text = date_, fontWeight = FontWeight.W500, fontSize = 11.sp)
                         Spacer(modifier = Modifier.padding(3.dp))

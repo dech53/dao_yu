@@ -82,7 +82,7 @@ class MainPage_ViewModel : ViewModel() {
 //    }
 
     fun loadMore() {
-        Log.d("加载第${pageId.value}测试","触发")
+        Log.d("main_page加载第${pageId.value}测试","触发")
         viewModelScope.launch {
             pageId.value++
             val newData = withContext(Dispatchers.IO) {

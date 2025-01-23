@@ -202,6 +202,7 @@ fun Main_Screen(viewModel: MainPage_ViewModel, ThreadviewModel: ThreadInfoView_V
                                 }
                             }) else (scope.launch {
                                 navController.popBackStack()
+                                ThreadviewModel.resetAll()
                                 viewModel.changeTitle(forumCategories.flatMap { it.forums }
                                     .find { it.id == nowForumId }!!.name)
                                 viewModel.changeTopBarState(false)
