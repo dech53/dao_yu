@@ -17,12 +17,9 @@ import com.dech53.dao_yu.component.TRCard
 @Composable
 fun ThreadInfoView(
     threadId: String,
-    paddingValues: PaddingValues,
     viewModel: ThreadInfoView_ViewModel,
-    navController: NavController
 ) {
     val threadInfo by viewModel.threadInfo
-    var isIndicatorVisible by remember { viewModel.isIndicatorVisible }
     val isRefreshing by remember { viewModel.isRefreshing }
     //初始化
     LaunchedEffect(Unit) {
@@ -39,7 +36,6 @@ fun ThreadInfoView(
     Box(
         contentAlignment = Alignment.TopCenter,
         modifier = Modifier
-            .padding(paddingValues)
             .fillMaxSize()
     ) {
         if (threadInfo == null) {
@@ -47,14 +43,12 @@ fun ThreadInfoView(
         } else {
             TRCard(
                 item = threadInfo!!,
-                navController = navController,
                 lazyListState = rememberLazyListState(),
                 onRefresh = { viewModel.refreshData() },
                 isRefreshing = isRefreshing,
                 loadMore = {
                     viewModel.loadMore()
                 },
-                isIndicatorVisible = isIndicatorVisible
             )
         }
     }

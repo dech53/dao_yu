@@ -1,5 +1,6 @@
 package com.dech53.dao_yu
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -48,6 +49,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -60,10 +62,8 @@ import com.dech53.dao_yu.component.PullToRefreshLazyColumn
 import com.dech53.dao_yu.static.forumCategories
 import com.dech53.dao_yu.viewmodels.MainPage_ViewModel
 import com.dech53.dao_yu.viewmodels.ThreadInfoView_ViewModel
-import com.dech53.dao_yu.views.ImageViewer
 import com.dech53.dao_yu.views.SearchView
 import com.dech53.dao_yu.views.SettingsView
-import com.dech53.dao_yu.views.ThreadInfoView
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -82,10 +82,11 @@ class MainActivity : ComponentActivity() {
 
 
 @Composable
-fun Main_Page(padding: PaddingValues, navController: NavController, viewModel: MainPage_ViewModel) {
+fun Main_Page(padding: PaddingValues, viewModel: MainPage_ViewModel) {
     val dataState by viewModel.dataState
     val isRefreshing by remember { viewModel.isRefreshing }
     val lazyListState = rememberLazyListState()
+    val context = LocalContext.current
     LaunchedEffect(Unit) {
         viewModel.loadData()
     }
@@ -103,18 +104,13 @@ fun Main_Page(padding: PaddingValues, navController: NavController, viewModel: M
                 lazyListState = lazyListState,
                 content = { item ->
                     Forum_card(item, imgClickAction = {
-                        navController.navigate(
-                            "图片浏览/${
-                                Regex(pattern = "/").replace(
-                                    item.img!!,
-                                    "&"
-                                ) + item.ext
-                            }"
-                        )
+                        val intent = Intent(context, ImageViewer::class.java)
+                        intent.putExtra("imgName", item.img+item.ext)
+                        context.startActivity(intent)
                     }, cardClickAction = {
-                        navController.navigate("串详情/${item.id}")
-                        viewModel.changeTopBarState(true)
-                        viewModel.changeTitle("No." + item.id.toString())
+                        val intent = Intent(context, ThreadAndReplyView::class.java)
+                        intent.putExtra("threadId", item.id.toString())
+                        context.startActivity(intent)
                     }, stricted = true, posterName = "")
                 },
                 isRefreshing = isRefreshing,
@@ -262,27 +258,11 @@ fun Main_Screen(viewModel: MainPage_ViewModel, ThreadviewModel: ThreadInfoView_V
                 composable("主页") {
                     Main_Page(
                         padding = innerPadding,
-                        navController = navController,
                         viewModel = viewModel
                     )
                 }
                 composable("设置") { SettingsView(padding = innerPadding) }
                 composable("搜索") { SearchView(padding = innerPadding) }
-                composable("图片浏览/{imgName}") { navBackStackEntry ->
-                    val imgName = navBackStackEntry.arguments?.getString("imgName") ?: ""
-                    ImageViewer(paddingValues = innerPadding, img_Location = imgName, onBack = {
-                        navController.popBackStack()
-                    })
-                }
-                composable("串详情/{id}") { navBackStackEntry ->
-                    val threadId = navBackStackEntry.arguments?.getString("id") ?: ""
-                    ThreadInfoView(
-                        threadId = threadId,
-                        paddingValues = innerPadding,
-                        viewModel = ThreadviewModel,
-                        navController = navController
-                    )
-                }
             }
         }
     }

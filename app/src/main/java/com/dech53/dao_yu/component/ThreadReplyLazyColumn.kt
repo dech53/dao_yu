@@ -1,5 +1,7 @@
 package com.dech53.dao_yu.component
 
+import android.content.Intent
+import android.os.Build.VERSION.SDK_INT
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -31,12 +33,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import coil3.ImageLoader
 import coil3.compose.AsyncImage
+import coil3.gif.AnimatedImageDecoder
+import coil3.gif.GifDecoder
+import com.dech53.dao_yu.ImageViewer
 import com.dech53.dao_yu.models.Reply
 import com.dech53.dao_yu.models.Thread
 import com.dech53.dao_yu.models.toReply
@@ -47,13 +54,12 @@ import com.dech53.dao_yu.R
 @Composable
 fun TRCard(
     item: List<Reply>,
-    navController: NavController,
     lazyListState: LazyListState = rememberLazyListState(),
     onRefresh: () -> Unit,
     isRefreshing: Boolean,
     loadMore: () -> Unit,
-    isIndicatorVisible: Boolean
 ) {
+    val context = LocalContext.current
     val poster = item[0].user_hash
     val pullToRefreshState = rememberPullToRefreshState()
     Box(
@@ -65,14 +71,9 @@ fun TRCard(
         LazyColumn(state = lazyListState) {
             itemsIndexed(item) { index, reply ->
                 ReplyCard(reply, poster, imgClickAction = {
-                    navController.navigate(
-                        "图片浏览/${
-                            Regex(pattern = "/").replace(
-                                reply.img!!,
-                                "&"
-                            ) + reply.ext
-                        }"
-                    )
+                    val intent = Intent(context, ImageViewer::class.java)
+                    intent.putExtra("imgName", reply.img + reply.ext)
+                    context.startActivity(intent)
                 })
                 //load more data when scroll to the bottom
                 LaunchedEffect(Unit) {
@@ -120,6 +121,15 @@ fun ReplyCard(reply: Reply, posterName: String, imgClickAction: () -> Unit) {
         Regex(pattern = "[^\\(]*|(?<=\\))[^\\)]*").find(reply.now)!!.value,
         "/"
     )
+    val imageLoader = ImageLoader.Builder(LocalContext.current)
+        .components {
+            if (SDK_INT >= 28) {
+                add(AnimatedImageDecoder.Factory())
+            } else {
+                add(GifDecoder.Factory())
+            }
+        }
+        .build()
     if (reply.id != 9999999) {
         Surface(
             shape = MaterialTheme.shapes.small,
@@ -152,6 +162,7 @@ fun ReplyCard(reply: Reply, posterName: String, imgClickAction: () -> Unit) {
                 HtmlText(htmlContent = reply.content, maxLines = Int.MAX_VALUE)
                 if (reply.img != "") {
                     AsyncImage(
+                        imageLoader = imageLoader,
                         model = Url.IMG_THUMB_QA + reply.img + reply.ext,
                         contentDescription = "img from usr ${reply.user_hash}",
                         modifier = Modifier

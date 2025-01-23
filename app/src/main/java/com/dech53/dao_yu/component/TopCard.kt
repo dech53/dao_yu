@@ -1,5 +1,6 @@
 package com.dech53.dao_yu.component
 
+import android.os.Build.VERSION.SDK_INT
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -25,10 +26,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
+import coil3.ImageLoader
 import coil3.compose.AsyncImage
+import coil3.gif.AnimatedImageDecoder
+import coil3.gif.GifDecoder
 import com.dech53.dao_yu.R
+import com.dech53.dao_yu.static.Url
 
 @Composable
 fun Forum_card(
@@ -43,6 +49,15 @@ fun Forum_card(
     var date_ = replace_.replace(dateRegex.find(thread.now)!!.value, "/")
     var activePhotoUrl by remember { mutableStateOf<String?>(null) }
     val interactionSource = remember { MutableInteractionSource() }
+    val imageLoader = ImageLoader.Builder(LocalContext.current)
+        .components {
+            if (SDK_INT >= 28) {
+                add(AnimatedImageDecoder.Factory())
+            } else {
+                add(GifDecoder.Factory())
+            }
+        }
+        .build()
     Surface(
         shape = MaterialTheme.shapes.small,
         color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -99,7 +114,8 @@ fun Forum_card(
             if (thread.img != "") {
                 //TODO Add click action on img
                 AsyncImage(
-                    model = "https://image.nmb.best/thumb/" + thread.img + thread.ext,
+                    imageLoader = imageLoader,
+                    model = Url.IMG_THUMB_QA + thread.img + thread.ext,
                     contentDescription = "img from usr ${thread.user_hash}",
                     modifier = Modifier
                         .clickable(
