@@ -74,7 +74,7 @@ fun ImageViewer(img_Location: String = "", onFinish: () -> Unit) {
     var isLoading by remember { mutableStateOf(false) }
     var loadSuccess by remember { mutableStateOf(false) }
 
-    val imageLoader = ImageLoader.Builder(context)
+    val imageLoader = remember{ImageLoader.Builder(context)
         .components {
             if (SDK_INT >= 28) {
                 add(AnimatedImageDecoder.Factory())
@@ -82,7 +82,7 @@ fun ImageViewer(img_Location: String = "", onFinish: () -> Unit) {
                 add(GifDecoder.Factory())
             }
         }
-        .build()
+        .build()}
     val items = listOf(
         PopUpDialogItem(
             title = "保存原图",

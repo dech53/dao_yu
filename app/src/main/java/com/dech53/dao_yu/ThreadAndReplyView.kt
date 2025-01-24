@@ -52,49 +52,44 @@ fun ThreadAndReplyView(
     viewModel: ThreadInfoView_ViewModel,
     onFinish: () -> Unit
 ) {
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier.fillMaxSize()
-    ) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    modifier = Modifier.shadow(elevation = 10.dp),
-                    title = {
-                        Text(text = "No." + threadId)
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        titleContentColor = MaterialTheme.colorScheme.primary,
-                    ),
-                    navigationIcon = {
-                        IconButton(
-                            onClick = {
-                                onFinish()
-                            }
-                        ) {
-                            Icon(
-                                imageVector = ImageVector.vectorResource(
-                                    id = R.drawable.baseline_arrow_back_24
-                                ),
-                                contentDescription = "Back"
-                            )
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                modifier = Modifier.shadow(elevation = 10.dp),
+                title = {
+                    Text(text = "No." + threadId)
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    titleContentColor = MaterialTheme.colorScheme.primary,
+                ),
+                navigationIcon = {
+                    IconButton(
+                        onClick = {
+                            onFinish()
                         }
+                    ) {
+                        Icon(
+                            imageVector = ImageVector.vectorResource(
+                                id = R.drawable.baseline_arrow_back_24
+                            ),
+                            contentDescription = "Back"
+                        )
                     }
-                )
-            }
-        ) { innerPadding ->
-            Box(
-                contentAlignment = Alignment.TopCenter,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-            ) {
-                ThreadInfoView(
-                    threadId = threadId,
-                    viewModel = viewModel,
-                )
-            }
+                }
+            )
+        }
+    ) { innerPadding ->
+        Box(
+            contentAlignment = Alignment.TopCenter,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            ThreadInfoView(
+                threadId = threadId,
+                viewModel = viewModel,
+            )
         }
     }
 }

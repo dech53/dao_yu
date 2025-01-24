@@ -31,6 +31,9 @@ class ThreadInfoView_ViewModel : ViewModel() {
     var canUseRequest = mutableStateOf(true)
         private set
 
+    var onError = mutableStateOf(false)
+        private set
+
     var replyCount = mutableStateOf(0)
         private set
 
@@ -39,17 +42,22 @@ class ThreadInfoView_ViewModel : ViewModel() {
 
     fun refreshData() {
         viewModelScope.launch {
-            isRefreshing.value = true
-            resetPageId()
-            val newData = withContext(Dispatchers.IO) {
-                Http_request.getThreadInfo("thread?id=${threadId.value}")
+            try {
+                onError.value = false
+                isRefreshing.value = true
+                resetPageId()
+                val newData = withContext(Dispatchers.IO) {
+                    Http_request.getThreadInfo("thread?id=${threadId.value}")
+                }
+                replyCount.value = newData!!.ReplyCount
+                maxPage.value =
+                    if (replyCount.value % 20 == 0) replyCount.value / 20 else replyCount.value / 20 + 1
+                Log.d("能加载的最多页数",maxPage.value.toString())
+                _threadInfo.value = newData!!.toReplies()
+                isRefreshing.value = false
+            }catch (e:Exception){
+                onError.value = true
             }
-            replyCount.value = newData!!.ReplyCount
-            maxPage.value =
-                if (replyCount.value % 20 == 0) replyCount.value / 20 else replyCount.value / 20 + 1
-            Log.d("能加载的最多页数",maxPage.value.toString())
-            _threadInfo.value = newData!!.toReplies()
-            isRefreshing.value = false
         }
     }
 
@@ -84,16 +92,5 @@ class ThreadInfoView_ViewModel : ViewModel() {
 
     fun resetPageId() {
         pageId.value = 1
-    }
-
-    fun resetAll(){
-        _threadInfo.value = null
-        threadId.value = ""
-        pageId.value = 1
-        isRefreshing.value = false
-        isIndicatorVisible.value = false
-        canUseRequest.value = true
-        replyCount.value = 0
-        maxPage.value = 0
     }
 }

@@ -24,30 +24,6 @@ import com.dech53.dao_yu.ui.theme.Dao_yuTheme
 @Composable
 fun SettingsView(padding: PaddingValues) {
     Dao_yuTheme {
-        Box(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .background(color = Color.White)
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.ic_forward),
-                contentDescription = "Developer Image",
-                modifier = Modifier
-                    .clip(
-                        CircleShape
-                    )
-                    .align(Alignment.TopCenter)
-                    .width(100.dp)
-                    .height(100.dp)
-            )
-            Column {
-                SettingsItem(
-                    ImageId = R.drawable.icons8_github_100,
-                    IconId = R.drawable.baseline_arrow_forward_24,
-                    modifier = Modifier
-                )
-            }
-        }
+
     }
 }

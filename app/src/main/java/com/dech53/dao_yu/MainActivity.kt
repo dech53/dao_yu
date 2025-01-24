@@ -7,13 +7,19 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,6 +27,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -51,6 +58,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
@@ -68,13 +76,12 @@ import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private val viewModel: MainPage_ViewModel by viewModels()
-    private val ThreadviewModel: ThreadInfoView_ViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             Dao_yuTheme {
-                Main_Screen(viewModel, ThreadviewModel)
+                Main_Screen(viewModel)
             }
         }
     }
@@ -85,17 +92,50 @@ class MainActivity : ComponentActivity() {
 fun Main_Page(padding: PaddingValues, viewModel: MainPage_ViewModel) {
     val dataState by viewModel.dataState
     val isRefreshing by remember { viewModel.isRefreshing }
+    val interactionSource = remember { MutableInteractionSource() }
     val lazyListState = rememberLazyListState()
     val context = LocalContext.current
-    LaunchedEffect(Unit) {
-        viewModel.loadData()
+    var onError by remember { viewModel.onError }
+    val visibilityState = remember { mutableStateOf(false) }
+
+    LaunchedEffect(key1 = dataState) {
+        visibilityState.value = true
     }
-    if (dataState == null) {
+    if (onError) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = null
+                ) {
+                    viewModel.loadData()
+                },
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = "加载失败，请点击重试",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.clickable(
+                    interactionSource = interactionSource,
+                    indication = null
+                ) {
+                    viewModel.refreshData(false)
+                }
+            )
+        }
+    } else if (dataState == null) {
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center,
         ) {
-            Text(text = "加载中")
+            CircularProgressIndicator(
+                modifier = Modifier
+                    .width(40.dp)
+                    .align(Alignment.Center),
+                color = MaterialTheme.colorScheme.primary
+            )
         }
     } else {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
@@ -103,20 +143,33 @@ fun Main_Page(padding: PaddingValues, viewModel: MainPage_ViewModel) {
                 items = dataState!!,
                 lazyListState = lazyListState,
                 content = { item ->
-                    Forum_card(item, imgClickAction = {
-                        val intent = Intent(context, ImageViewer::class.java)
-                        intent.putExtra("imgName", item.img+item.ext)
-                        context.startActivity(intent)
-                    }, cardClickAction = {
-                        val intent = Intent(context, ThreadAndReplyView::class.java)
-                        intent.putExtra("threadId", item.id.toString())
-                        context.startActivity(intent)
-                    }, stricted = true, posterName = "")
+                    AnimatedVisibility(
+                        visible = visibilityState.value,
+                        enter = slideInVertically (
+                        ) + expandVertically(
+                            // Expand from the top.
+                            expandFrom = Alignment.Top
+                        ) + fadeIn(
+                            // Fade in with the initial alpha of 0.3f.
+                            initialAlpha = 0.3f
+                        )
+                    ) {
+                        Forum_card(thread = item, imgClickAction = {
+                            val intent = Intent(context, ImageViewer::class.java)
+                            intent.putExtra("imgName", item.img + item.ext)
+                            context.startActivity(intent)
+                        }, cardClickAction = {
+                            val intent = Intent(context, ThreadAndReplyView::class.java)
+                            intent.putExtra("threadId", item.id.toString())
+                            context.startActivity(intent)
+                        }, stricted = true, posterName = "")
+                    }
+
                 },
                 isRefreshing = isRefreshing,
                 //refreshing method
                 onRefresh = {
-                    viewModel.refreshData()
+                    viewModel.refreshData(true)
                 },
                 contentPadding = padding,
                 loadMore = {
@@ -131,13 +184,17 @@ fun Main_Page(padding: PaddingValues, viewModel: MainPage_ViewModel) {
 }
 
 @Composable
-fun Main_Screen(viewModel: MainPage_ViewModel, ThreadviewModel: ThreadInfoView_ViewModel) {
+fun Main_Screen(viewModel: MainPage_ViewModel) {
     //change bottom Icon
     var selectedItemIndex by rememberSaveable { mutableStateOf(0) }
     //navigation action
     val navController = rememberNavController()
 
     val title by remember { viewModel.title }
+
+    LaunchedEffect(Unit) {
+        viewModel.loadData()
+    }
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 
@@ -192,22 +249,14 @@ fun Main_Screen(viewModel: MainPage_ViewModel, ThreadviewModel: ThreadInfoView_V
                     navigationIcon = {
                         IconButton(onClick = {
                             //TODO change the request forum id
-                            if (!topBarState) (scope.launch {
+                            scope.launch {
                                 drawerState.apply {
                                     if (isClosed) open() else close()
                                 }
-                            }) else (scope.launch {
-                                navController.popBackStack()
-                                ThreadviewModel.resetAll()
-                                viewModel.changeTitle(forumCategories.flatMap { it.forums }
-                                    .find { it.id == nowForumId }!!.name)
-                                viewModel.changeTopBarState(false)
-                            })
+                            }
                         }) {
                             Icon(
-                                imageVector = if (!topBarState) ImageVector.vectorResource(id = R.drawable.baseline_sync_alt_24) else ImageVector.vectorResource(
-                                    id = R.drawable.baseline_arrow_back_24
-                                ),
+                                imageVector = ImageVector.vectorResource(id = R.drawable.baseline_sync_alt_24),
                                 contentDescription = "Back",
                             )
                         }
@@ -220,6 +269,9 @@ fun Main_Screen(viewModel: MainPage_ViewModel, ThreadviewModel: ThreadInfoView_V
                         NavigationBarItem(
                             selected = selectedItemIndex == index,
                             onClick = {
+                                if (index == 0) {
+                                    viewModel.refreshData(true)
+                                }
                                 selectedItemIndex = index
                                 navController.navigate(item.title)
                                 viewModel.changeTitle(forumCategories.flatMap { it.forums }

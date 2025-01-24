@@ -31,6 +31,9 @@ class MainPage_ViewModel : ViewModel() {
     var topBarState = mutableStateOf(false)
         private set
 
+    var onError = mutableStateOf(false)
+        private set
+
 //    var isChangeForumIdDialogVisible = mutableStateOf(false)
 //        private set
 
@@ -42,32 +45,49 @@ class MainPage_ViewModel : ViewModel() {
     // initial request
     fun loadData() {
         viewModelScope.launch {
-            if (_dataState.value == null) {
-                val data = withContext(Dispatchers.IO) {
-                    Http_request.get<Thread>("showf?id=${forumId.value}")
+            try {
+                onError.value = false
+                if (_dataState.value == null) {
+                    val data = withContext(Dispatchers.IO) {
+                        Http_request.get<Thread>("showf?id=${forumId.value}")
+                    }
+                    _dataState.value = data
                 }
-                _dataState.value = data
+            } catch (e: Exception) {
+                onError.value = true
+                Log.d("main_page", "加载失败")
+                Log.d("main_page datastate", dataState.value.toString())
+                Log.d("main_page onError", onError.value.toString())
             }
         }
     }
 
     // refresh data
-    fun refreshData() {
+    fun refreshData(showIcon: Boolean) {
         viewModelScope.launch {
-            isRefreshing.value = true
-            val newData = withContext(Dispatchers.IO) {
-                Http_request.get<Thread>("showf?id=${forumId.value}")
+            try {
+                if (showIcon){
+                    isRefreshing.value = true
+                }
+                val newData = withContext(Dispatchers.IO) {
+                    Http_request.get<Thread>("showf?id=${forumId.value}")
+                }
+                _dataState.value = newData
+                resetPageId()
+                if (showIcon){
+                    isRefreshing.value = false
+                }
+            } catch (e: Exception) {
+                onError.value = true
+                _dataState.value = null
             }
-            _dataState.value = newData
-            resetPageId()
-            isRefreshing.value = false
         }
     }
 
-    fun changeForumId(id: String) {
+    fun changeForumId(id: String, showIcon: Boolean) {
         if (forumId.value != id) {
             forumId.value = id
-            refreshData()
+            refreshData(showIcon)
         }
     }
 
@@ -82,7 +102,7 @@ class MainPage_ViewModel : ViewModel() {
 //    }
 
     fun loadMore() {
-        Log.d("main_page加载第${pageId.value}测试","触发")
+        Log.d("main_page加载第${pageId.value}测试", "触发")
         viewModelScope.launch {
             pageId.value++
             val newData = withContext(Dispatchers.IO) {

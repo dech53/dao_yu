@@ -68,7 +68,7 @@ fun TRCard(
             .fillMaxSize()
             .nestedScroll(pullToRefreshState.nestedScrollConnection)
     ) {
-        LazyColumn(state = lazyListState) {
+        LazyColumn(state = lazyListState, modifier = Modifier.fillMaxSize()) {
             itemsIndexed(item) { index, reply ->
                 ReplyCard(reply, poster, imgClickAction = {
                     val intent = Intent(context, ImageViewer::class.java)
@@ -121,15 +121,18 @@ fun ReplyCard(reply: Reply, posterName: String, imgClickAction: () -> Unit) {
         Regex(pattern = "[^\\(]*|(?<=\\))[^\\)]*").find(reply.now)!!.value,
         "/"
     )
-    val imageLoader = ImageLoader.Builder(LocalContext.current)
-        .components {
-            if (SDK_INT >= 28) {
-                add(AnimatedImageDecoder.Factory())
-            } else {
-                add(GifDecoder.Factory())
+    val context = LocalContext.current
+    val imageLoader = remember {
+        ImageLoader.Builder(context)
+            .components {
+                if (SDK_INT >= 28) {
+                    add(AnimatedImageDecoder.Factory())
+                } else {
+                    add(GifDecoder.Factory())
+                }
             }
-        }
-        .build()
+            .build()
+    }
     if (reply.id != 9999999) {
         Surface(
             shape = MaterialTheme.shapes.small,
