@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -128,7 +129,7 @@ fun Forum_card(
                             //zoom in the photo
                             imgClickAction()
                         }
-                        .clip(MaterialTheme.shapes.small),
+                        .clip(shape = MaterialTheme.shapes.small),
                     //placeholder mean phtoto is not completely loaded
                     placeholder = painterResource(id = R.drawable.apple_touch_icon)
                 )

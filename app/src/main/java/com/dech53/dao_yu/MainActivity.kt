@@ -7,16 +7,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -26,10 +20,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -45,7 +41,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import com.dech53.dao_yu.component.Forum_card
 import com.dech53.dao_yu.ui.theme.Dao_yuTheme
@@ -58,49 +53,68 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.dech53.dao_yu.component.ForumCategoryDialog
 import com.dech53.dao_yu.component.MainButtonItems
 import com.dech53.dao_yu.component.PullToRefreshLazyColumn
+import com.dech53.dao_yu.dao.CookieDatabase
 import com.dech53.dao_yu.static.forumCategories
+import com.dech53.dao_yu.viewmodels.CookieViewModel
 import com.dech53.dao_yu.viewmodels.MainPage_ViewModel
-import com.dech53.dao_yu.viewmodels.ThreadInfoView_ViewModel
 import com.dech53.dao_yu.views.SearchView
 import com.dech53.dao_yu.views.SettingsView
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
-    private val viewModel: MainPage_ViewModel by viewModels()
+    private val scope = CoroutineScope(Dispatchers.IO)
+    private val viewModel by viewModels<MainPage_ViewModel>(
+        factoryProducer = {
+            object : ViewModelProvider.Factory {
+                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                    return MainPage_ViewModel(db.cookieDao) as T
+                }
+            }
+        }
+    )
+    private val db by lazy {
+        CookieDatabase.getDatabase(applicationContext)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             Dao_yuTheme {
-                Main_Screen(viewModel)
+                Main_Screen(viewModel, viewModel.hash.value)
             }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        scope.launch {
+            viewModel.initHash()
         }
     }
 }
 
 
 @Composable
-fun Main_Page(padding: PaddingValues, viewModel: MainPage_ViewModel) {
+fun Main_Page(padding: PaddingValues, viewModel: MainPage_ViewModel, hash: String) {
     val dataState by viewModel.dataState
     val isRefreshing by remember { viewModel.isRefreshing }
     val interactionSource = remember { MutableInteractionSource() }
     val lazyListState = rememberLazyListState()
     val context = LocalContext.current
-    var onError by remember { viewModel.onError }
-    val visibilityState = remember { mutableStateOf(false) }
+    val onError by remember { viewModel.onError }
 
-    LaunchedEffect(key1 = dataState) {
-        visibilityState.value = true
-    }
     if (onError) {
         Box(
             modifier = Modifier
@@ -143,28 +157,16 @@ fun Main_Page(padding: PaddingValues, viewModel: MainPage_ViewModel) {
                 items = dataState!!,
                 lazyListState = lazyListState,
                 content = { item ->
-                    AnimatedVisibility(
-                        visible = visibilityState.value,
-                        enter = slideInVertically (
-                        ) + expandVertically(
-                            // Expand from the top.
-                            expandFrom = Alignment.Top
-                        ) + fadeIn(
-                            // Fade in with the initial alpha of 0.3f.
-                            initialAlpha = 0.3f
-                        )
-                    ) {
-                        Forum_card(thread = item, imgClickAction = {
-                            val intent = Intent(context, ImageViewer::class.java)
-                            intent.putExtra("imgName", item.img + item.ext)
-                            context.startActivity(intent)
-                        }, cardClickAction = {
-                            val intent = Intent(context, ThreadAndReplyView::class.java)
-                            intent.putExtra("threadId", item.id.toString())
-                            context.startActivity(intent)
-                        }, stricted = true, posterName = "")
-                    }
-
+                    Forum_card(thread = item, imgClickAction = {
+                        val intent = Intent(context, ImageViewer::class.java)
+                        intent.putExtra("imgName", item.img + item.ext)
+                        context.startActivity(intent)
+                    }, cardClickAction = {
+                        val intent = Intent(context, ThreadAndReplyView::class.java)
+                        intent.putExtra("threadId", item.id.toString())
+                        intent.putExtra("hash", hash)
+                        context.startActivity(intent)
+                    }, stricted = true, posterName = "")
                 },
                 isRefreshing = isRefreshing,
                 //refreshing method
@@ -184,23 +186,22 @@ fun Main_Page(padding: PaddingValues, viewModel: MainPage_ViewModel) {
 }
 
 @Composable
-fun Main_Screen(viewModel: MainPage_ViewModel) {
+fun Main_Screen(viewModel: MainPage_ViewModel, hash: String) {
+
     //change bottom Icon
-    var selectedItemIndex by rememberSaveable { mutableStateOf(0) }
+    var selectedItemIndex by rememberSaveable { mutableIntStateOf(0) }
     //navigation action
     val navController = rememberNavController()
 
     val title by remember { viewModel.title }
-
     LaunchedEffect(Unit) {
         viewModel.loadData()
     }
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 
-    var topBarState by remember { viewModel.topBarState }
-
     val nowForumId by remember { viewModel.forumId }
+
 
     val scope = rememberCoroutineScope()
     ModalNavigationDrawer(
@@ -237,6 +238,19 @@ fun Main_Screen(viewModel: MainPage_ViewModel) {
         }
     ) {
         Scaffold(
+            floatingActionButton = {
+                FloatingActionButton(
+                    onClick = {
+                        Log.d("悬浮按钮点击", "触发")
+                    },
+                    shape = CircleShape
+                ) {
+                    Icon(
+                        imageVector = ImageVector.vectorResource(id = R.drawable.baseline_create_24),
+                        contentDescription = "Back",
+                    )
+                }
+            },
             topBar = {
                 @OptIn(ExperimentalMaterial3Api::class)
                 TopAppBar(
@@ -269,14 +283,14 @@ fun Main_Screen(viewModel: MainPage_ViewModel) {
                         NavigationBarItem(
                             selected = selectedItemIndex == index,
                             onClick = {
-                                if (index == 0) {
-                                    viewModel.refreshData(true)
-                                }
                                 selectedItemIndex = index
                                 navController.navigate(item.title)
-                                viewModel.changeTitle(forumCategories.flatMap { it.forums }
-                                    .find { it.id == nowForumId }!!.name)
-                                viewModel.changeTopBarState(false)
+                                if (index == 0) {
+                                    viewModel.changeTitle(forumCategories.flatMap { it.forums }
+                                        .find { it.id == nowForumId }!!.name)
+                                } else {
+                                    viewModel.changeTitle(item.title)
+                                }
                             },
                             label = {
                                 Text(text = item.title)
@@ -310,7 +324,8 @@ fun Main_Screen(viewModel: MainPage_ViewModel) {
                 composable("主页") {
                     Main_Page(
                         padding = innerPadding,
-                        viewModel = viewModel
+                        viewModel = viewModel,
+                        hash = hash
                     )
                 }
                 composable("设置") { SettingsView(padding = innerPadding) }

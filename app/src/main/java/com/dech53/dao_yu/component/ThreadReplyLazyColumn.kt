@@ -1,8 +1,13 @@
+@file:OptIn(ExperimentalFoundationApi::class)
+
 package com.dech53.dao_yu.component
 
 import android.content.Intent
 import android.os.Build.VERSION.SDK_INT
+import android.util.Log
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -141,6 +146,12 @@ fun ReplyCard(reply: Reply, posterName: String, imgClickAction: () -> Unit) {
             modifier = Modifier
                 .padding(all = 5.dp)
                 .fillMaxWidth()
+                .combinedClickable(
+                    onClick = {},
+                    onLongClick = {
+                        Log.d("TR卡片长按", "触发${reply.id}")
+                    }
+                )
         ) {
             Column(modifier = Modifier.padding(5.dp)) {
                 Row(

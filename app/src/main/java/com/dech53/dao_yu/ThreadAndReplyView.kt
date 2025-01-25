@@ -3,6 +3,7 @@
 package com.dech53.dao_yu
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -10,7 +11,9 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -35,6 +38,8 @@ class ThreadAndReplyView : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val threadId = intent.getStringExtra("threadId")
+        val hash = intent.getStringExtra("hash")
+        viewModel.hash.value = hash!!
         setContent {
             Dao_yuTheme {
                 ThreadAndReplyView(threadId = threadId!!, viewModel = viewModel, onFinish = {
@@ -53,6 +58,14 @@ fun ThreadAndReplyView(
     onFinish: () -> Unit
 ) {
     Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(onClick = {}) {
+                Icon(
+                    imageVector = ImageVector.vectorResource(id = R.drawable.baseline_message_24),
+                    contentDescription = "回复串按钮"
+                )
+            }
+        },
         topBar = {
             TopAppBar(
                 modifier = Modifier.shadow(elevation = 10.dp),

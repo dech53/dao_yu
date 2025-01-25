@@ -1,17 +1,25 @@
 package com.dech53.dao_yu.viewmodels
 
+import android.content.Context
 import android.util.Log
+import androidx.activity.viewModels
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.room.Room
+import com.dech53.dao_yu.dao.CookieDao
+import com.dech53.dao_yu.dao.CookieDatabase
 import com.dech53.dao_yu.utils.Http_request
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.dech53.dao_yu.models.*
+import kotlinx.coroutines.flow.MutableStateFlow
 
-class MainPage_ViewModel : ViewModel() {
+class MainPage_ViewModel(private val cookieDao: CookieDao) : ViewModel() {
     private val _dataState = mutableStateOf<List<Thread>?>(null)
     val dataState: State<List<Thread>?> = _dataState
 
@@ -28,18 +36,26 @@ class MainPage_ViewModel : ViewModel() {
     var title = mutableStateOf("婆罗门一")
         private set
 
-    var topBarState = mutableStateOf(false)
-        private set
 
     var onError = mutableStateOf(false)
         private set
 
-//    var isChangeForumIdDialogVisible = mutableStateOf(false)
+    //    var isChangeForumIdDialogVisible = mutableStateOf(false)
 //        private set
+//    private val db = CookieDatabase.getDatabase(context)
+//    private val cookieDao = db.cookieDao
+//
 
-    fun changeTopBarState(state: Boolean) {
-        if (topBarState.value != state)
-            topBarState.value = state
+    var hash = mutableStateOf("")
+
+
+    fun initHash() {
+        viewModelScope.launch {
+            hash.value = cookieDao.getHashToVerify()?.cookie ?: ""
+        }
+    }
+    init {
+        initHash()
     }
 
     // initial request
@@ -49,7 +65,7 @@ class MainPage_ViewModel : ViewModel() {
                 onError.value = false
                 if (_dataState.value == null) {
                     val data = withContext(Dispatchers.IO) {
-                        Http_request.get<Thread>("showf?id=${forumId.value}")
+                        Http_request.get<Thread>("showf?id=${forumId.value}", hash.value)
                     }
                     _dataState.value = data
                 }
@@ -66,15 +82,15 @@ class MainPage_ViewModel : ViewModel() {
     fun refreshData(showIcon: Boolean) {
         viewModelScope.launch {
             try {
-                if (showIcon){
+                if (showIcon) {
                     isRefreshing.value = true
                 }
                 val newData = withContext(Dispatchers.IO) {
-                    Http_request.get<Thread>("showf?id=${forumId.value}")
+                    Http_request.get<Thread>("showf?id=${forumId.value}", hash.value)
                 }
                 _dataState.value = newData
                 resetPageId()
-                if (showIcon){
+                if (showIcon) {
                     isRefreshing.value = false
                 }
             } catch (e: Exception) {
@@ -106,7 +122,10 @@ class MainPage_ViewModel : ViewModel() {
         viewModelScope.launch {
             pageId.value++
             val newData = withContext(Dispatchers.IO) {
-                Http_request.get<Thread>("showf?id=${forumId.value}&page=${pageId.value}")
+                Http_request.get<Thread>(
+                    "showf?id=${forumId.value}&page=${pageId.value}",
+                    hash.value
+                )
             }
             _dataState.value = (_dataState.value.orEmpty() + newData!!)
         }

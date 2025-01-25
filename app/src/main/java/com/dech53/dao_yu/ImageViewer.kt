@@ -49,6 +49,7 @@ import com.dech53.dao_yu.utils.DownloadImageFromUrl
 import kotlinx.coroutines.launch
 
 class ImageViewer : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -58,6 +59,7 @@ class ImageViewer : ComponentActivity() {
                 ImageViewer(img_Location = imgName!!, onFinish = {
                     Log.d("获取的图片名字", imgName)
                     onBackPressedDispatcher.onBackPressed()
+
                 })
             }
         }
@@ -184,4 +186,3 @@ fun ImageViewer(img_Location: String = "", onFinish: () -> Unit) {
         }
     }
 }
-

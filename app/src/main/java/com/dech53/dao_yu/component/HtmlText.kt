@@ -11,6 +11,8 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.sp
 
 
 @Composable
@@ -18,6 +20,7 @@ fun HtmlText(
     htmlContent: String,
     textStyle: TextStyle = MaterialTheme.typography.bodyMedium,
     maxLines: Int = 4,
+    fontSize: TextUnit = 15.sp
 ) {
     Text(
         //display html and <a> into interactive mode
@@ -31,6 +34,7 @@ fun HtmlText(
             )
         ),
         modifier = Modifier.animateContentSize(),
+        fontSize = fontSize,
         maxLines = maxLines,
         style = textStyle,
     )

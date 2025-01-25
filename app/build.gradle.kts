@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    id("com.google.devtools.ksp")
 }
 
 android {
@@ -71,4 +72,13 @@ dependencies {
     //navigation
     val nav_version = "2.8.5"
     implementation("androidx.navigation:navigation-compose:$nav_version")
+    //qr code action
+    implementation("com.google.zxing:core:3.5.3")
+    implementation ("com.journeyapps:zxing-android-embedded:4.3.0")
+
+    //room
+    val room_version = "2.6.1"
+    implementation("androidx.room:room-ktx:2.6.1")
+    implementation("androidx.room:room-runtime:$room_version")
+    ksp("androidx.room:room-compiler:$room_version")
 }

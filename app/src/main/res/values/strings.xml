@@ -2,4 +2,5 @@
     <string name="app_name">島語</string>
     <string name="title_activity_image_viewer">ImageViewer</string>
     <string name="title_activity_thread_and_reply_view">ThreadAndReplyView</string>
+    <string name="title_activity_cookie_manage">CookieManage</string>
 </resources>

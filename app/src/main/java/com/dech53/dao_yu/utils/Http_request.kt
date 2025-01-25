@@ -18,7 +18,7 @@ object Http_request {
     val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
 
     //get request , add url and form params in the future
-    inline fun <reified T> get(url: String): List<T>? {
+    inline fun <reified T> get(url: String, cookie: String = ""): List<T>? {
         //reflect type and build List T
         val type = Types.newParameterizedType(List::class.java, T::class.java)
         //define adapter
@@ -26,6 +26,7 @@ object Http_request {
         //create request
         val request = Request.Builder()
             .get()
+            .addHeader("Cookie", "userhash=${cookie}")
             .url(Url.API_BASE_URL + url)
             .build()
         //create call
@@ -58,10 +59,11 @@ object Http_request {
 
 
     //Thread info get method
-    fun getThreadInfo(url: String): Thread? {
+    fun getThreadInfo(url: String, cookie: String = ""): Thread? {
         val adapter = moshi.adapter<Thread>(Thread::class.java)
         val request = Request.Builder()
             .get()
+            .addHeader("Cookie", "userhash=${cookie}")
             .url(Url.API_BASE_URL + url)
             .build()
         val call = client.newCall(request)
