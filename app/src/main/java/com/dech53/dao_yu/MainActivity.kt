@@ -11,6 +11,7 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -50,6 +51,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
@@ -124,7 +126,8 @@ fun Main_Page(padding: PaddingValues, viewModel: MainPage_ViewModel, hash: Strin
                     indication = null
                 ) {
                     viewModel.loadData()
-                },
+                }
+                ,
             contentAlignment = Alignment.Center,
         ) {
             Text(
@@ -141,7 +144,9 @@ fun Main_Page(padding: PaddingValues, viewModel: MainPage_ViewModel, hash: Strin
         }
     } else if (dataState == null) {
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                ,
             contentAlignment = Alignment.Center,
         ) {
             CircularProgressIndicator(
@@ -152,7 +157,11 @@ fun Main_Page(padding: PaddingValues, viewModel: MainPage_ViewModel, hash: Strin
             )
         }
     } else {
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .fillMaxSize()
+        ) {
             PullToRefreshLazyColumn(
                 items = dataState!!,
                 lazyListState = lazyListState,
@@ -314,13 +323,7 @@ fun Main_Screen(viewModel: MainPage_ViewModel, hash: String) {
             }
         ) { innerPadding ->
             //navigation route
-            NavHost(navController = navController, enterTransition = {
-                fadeIn(
-                    tween(durationMillis = 300)
-                )
-            }, exitTransition = {
-                fadeOut(tween(durationMillis = 300))
-            }, startDestination = "主页") {
+            NavHost(navController = navController, startDestination = "主页") {
                 composable("主页") {
                     Main_Page(
                         padding = innerPadding,

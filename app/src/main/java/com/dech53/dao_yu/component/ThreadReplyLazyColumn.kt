@@ -43,6 +43,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.text.HtmlCompat
 import androidx.navigation.NavController
 import coil3.ImageLoader
 import coil3.compose.AsyncImage
@@ -54,144 +55,15 @@ import com.dech53.dao_yu.models.Thread
 import com.dech53.dao_yu.models.toReply
 import com.dech53.dao_yu.static.Url
 import com.dech53.dao_yu.R
+import com.dech53.dao_yu.viewmodels.ThreadInfoView_ViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TRCard(
     item: List<Reply>,
     lazyListState: LazyListState = rememberLazyListState(),
-    onRefresh: () -> Unit,
-    isRefreshing: Boolean,
     loadMore: () -> Unit,
+    viewModel: ThreadInfoView_ViewModel
 ) {
-    val context = LocalContext.current
-    val poster = item[0].user_hash
-    val pullToRefreshState = rememberPullToRefreshState()
-    Box(
-        contentAlignment = Alignment.TopCenter,
-        modifier = Modifier
-            .fillMaxSize()
-            .nestedScroll(pullToRefreshState.nestedScrollConnection)
-    ) {
-        LazyColumn(state = lazyListState, modifier = Modifier.fillMaxSize()) {
-            itemsIndexed(item) { index, reply ->
-                ReplyCard(reply, poster, imgClickAction = {
-                    val intent = Intent(context, ImageViewer::class.java)
-                    intent.putExtra("imgName", reply.img + reply.ext)
-                    context.startActivity(intent)
-                })
-                //load more data when scroll to the bottom
-                LaunchedEffect(Unit) {
-                    if (index == lazyListState.layoutInfo.totalItemsCount - 1) {
-                        loadMore()
-                    }
-                }
-            }
-            //圆形进度条
-//            item {
-//                if (isIndicatorVisible) {
-//                    CircularProgressIndicator(
-//                        modifier = Modifier.width(10.dp),
-//                        color = MaterialTheme.colorScheme.primary,
-//                        trackColor = MaterialTheme.colorScheme.surfaceVariant
-//                    )
-//                }
-//            }
-        }
-        if (pullToRefreshState.isRefreshing) {
-            LaunchedEffect(true) {
-                onRefresh()
-            }
-        }
-        //same logistic
-        LaunchedEffect(isRefreshing) {
-            if (isRefreshing) {
-                pullToRefreshState.startRefresh()
-            } else {
-                pullToRefreshState.endRefresh()
-            }
-        }
 
-        PullToRefreshContainer(
-            state = pullToRefreshState,
-            modifier = Modifier.align(Alignment.TopCenter)
-        )
-    }
-}
-
-@Composable
-fun ReplyCard(reply: Reply, posterName: String, imgClickAction: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val date_ = Regex(pattern = "-").replace(
-        Regex(pattern = "[^\\(]*|(?<=\\))[^\\)]*").find(reply.now)!!.value,
-        "/"
-    )
-    val context = LocalContext.current
-    val imageLoader = remember {
-        ImageLoader.Builder(context)
-            .components {
-                if (SDK_INT >= 28) {
-                    add(AnimatedImageDecoder.Factory())
-                } else {
-                    add(GifDecoder.Factory())
-                }
-            }
-            .build()
-    }
-    if (reply.id != 9999999) {
-        Surface(
-            shape = MaterialTheme.shapes.small,
-            color = MaterialTheme.colorScheme.surfaceContainerLow,
-            shadowElevation = 4.dp,
-            modifier = Modifier
-                .padding(all = 5.dp)
-                .fillMaxWidth()
-                .combinedClickable(
-                    onClick = {},
-                    onLongClick = {
-                        Log.d("TR卡片长按", "触发${reply.id}")
-                    }
-                )
-        ) {
-            Column(modifier = Modifier.padding(5.dp)) {
-                Row(
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row {
-                        if ((posterName == reply.user_hash))
-                            Text(
-                                "Poster",
-                                fontWeight = FontWeight.W500,
-                                fontSize = 11.sp,
-                                color = Color.Red
-                            )
-                        Spacer(modifier = Modifier.padding(3.dp))
-                        Text(text = date_, fontWeight = FontWeight.W500, fontSize = 11.sp)
-                        Spacer(modifier = Modifier.padding(3.dp))
-                        Text(text = reply.user_hash, fontWeight = FontWeight.Bold, fontSize = 11.sp)
-                    }
-                    Text(text = "No.${reply.id}", fontWeight = FontWeight.W500, fontSize = 11.sp)
-                }
-                HtmlText(htmlContent = reply.content, maxLines = Int.MAX_VALUE)
-                if (reply.img != "") {
-                    AsyncImage(
-                        imageLoader = imageLoader,
-                        model = Url.IMG_THUMB_QA + reply.img + reply.ext,
-                        contentDescription = "img from usr ${reply.user_hash}",
-                        modifier = Modifier
-                            .clickable(
-                                indication = null,
-                                interactionSource = interactionSource
-                            ) {
-                                //zoom in the photo
-                                imgClickAction()
-                            }
-                            .clip(MaterialTheme.shapes.small),
-                        placeholder = painterResource(id = R.drawable.apple_touch_icon)
-                    )
-                }
-            }
-        }
-    }
 }

@@ -85,6 +85,7 @@ class MainPage_ViewModel(private val cookieDao: CookieDao) : ViewModel() {
                 if (showIcon) {
                     isRefreshing.value = true
                 }
+                onError.value = false
                 val newData = withContext(Dispatchers.IO) {
                     Http_request.get<Thread>("showf?id=${forumId.value}", hash.value)
                 }

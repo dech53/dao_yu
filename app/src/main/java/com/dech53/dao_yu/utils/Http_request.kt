@@ -1,6 +1,7 @@
 package com.dech53.dao_yu.utils
 
 import android.util.Log
+import com.dech53.dao_yu.models.QuoteRef
 import com.dech53.dao_yu.models.Thread
 import com.dech53.dao_yu.static.Url
 import okhttp3.CookieJar
@@ -65,6 +66,21 @@ object Http_request {
             .get()
             .addHeader("Cookie", "userhash=${cookie}")
             .url(Url.API_BASE_URL + url)
+            .build()
+        val call = client.newCall(request)
+        val response = call.execute()
+        val responseBody = response.body?.string() ?: ""
+        Log.d("request data", responseBody)
+        //body process
+        return adapter.fromJson(responseBody)
+    }
+
+    fun getRef(id: String,cookie: String): QuoteRef? {
+        val adapter = moshi.adapter<QuoteRef>(QuoteRef::class.java)
+        val request = Request.Builder()
+            .get()
+            .addHeader("Cookie", "userhash=${cookie}")
+            .url(Url.API_BASE_URL + "ref?id=${id}")
             .build()
         val call = client.newCall(request)
         val response = call.execute()

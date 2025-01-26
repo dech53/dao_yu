@@ -1,6 +1,7 @@
 package com.dech53.dao_yu.component
 
 import android.os.Build.VERSION.SDK_INT
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -30,12 +31,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
+import androidx.core.text.HtmlCompat
 import coil3.ImageLoader
 import coil3.compose.AsyncImage
 import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import com.dech53.dao_yu.R
 import com.dech53.dao_yu.static.Url
+import com.dech53.dao_yu.viewmodels.ThreadInfoView_ViewModel
 
 @Composable
 fun Forum_card(
@@ -63,9 +66,8 @@ fun Forum_card(
             .build()
     }
     Surface(
-        shape = MaterialTheme.shapes.small,
+        shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceContainerLow,
-        shadowElevation = 4.dp,
         modifier = Modifier
             .padding(all = 5.dp)
             .fillMaxWidth()
@@ -114,7 +116,8 @@ fun Forum_card(
                 }
             }
             //make the html code show in the card component
-            HtmlText(htmlContent = thread.content, maxLines = if (stricted) 6 else Int.MAX_VALUE)
+            CommonHtmlText(htmlContent = thread.content, maxLines = if (stricted) 6 else Int.MAX_VALUE)
+
             if (thread.img != "") {
                 //TODO Add click action on img
                 AsyncImage(

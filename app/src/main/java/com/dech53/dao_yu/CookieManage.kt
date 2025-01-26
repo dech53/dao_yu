@@ -16,6 +16,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -195,7 +196,14 @@ fun CookiePage(
                 }
             }
             Button(onClick = { addAction() }) {
-                Text(text = "添加饼干")
+                Row() {
+                    Icon(
+                        imageVector = ImageVector.vectorResource(id = R.drawable.baseline_add_24),
+                        contentDescription = ""
+                    )
+                    Text(text = "添加饼干")
+                }
+
             }
         }
     }
