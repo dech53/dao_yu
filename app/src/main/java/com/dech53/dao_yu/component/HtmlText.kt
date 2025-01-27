@@ -10,8 +10,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -52,7 +55,8 @@ fun HtmlTRText(
     maxLines: Int = Int.MAX_VALUE,
     fontSize: TextUnit = 15.sp,
     viewModel: ThreadInfoView_ViewModel,
-    context:Context
+    context: Context,
+    posterName: String
 ) {
 
     //main regex match
@@ -83,10 +87,10 @@ fun HtmlTRText(
                 // 提取 id
                 Log.d("paired text", text)
                 val id = Regex("\\d+").find(Regex("&gt;&gt;No.\\d+").find(text)!!.value)!!.value
-
+                viewModel.getRef(id)
                 var contentState = remember { viewModel.contentContext }
                 contentState[id]?.let { quoteRef ->
-                    QuotedComponent(quoteRef, viewModel = viewModel, true,context)
+                    QuotedComponent(quoteRef, viewModel = viewModel, context, posterName)
 //                    OutlinedTextField(
 //                        value = TextFieldValue(
 //                            annotatedString = AnnotatedString.fromHtml(
@@ -126,18 +130,20 @@ fun HtmlTRText(
                         horizontalArrangement = Arrangement.Start
                     ) {
                         Text(
-                            text = ">>${id}",
+                            text = ">>No.${id}",
                             color = Color(0xFF789922),
+                            fontSize = 14.sp,
                             style = MaterialTheme.typography.labelSmall.copy(
-                                color = MaterialTheme.colorScheme.primary,
+                                color = Color(0xFF789922),
                                 background = MaterialTheme.colorScheme.surfaceContainerLow
                             ),
-                            modifier = Modifier.clickable(
-                                interactionSource = interactionSource,
-                                indication = null
-                            ) {
-                                viewModel.getRef(id)
-                            })
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = Color(0xFF789922)
+                        )
                     }
                 }
             } else {
@@ -147,7 +153,7 @@ fun HtmlTRText(
                         linkStyles = TextLinkStyles(
                             style = SpanStyle(
                                 textDecoration = TextDecoration.Underline,
-                                color = MaterialTheme.colorScheme.primary
+                                color = Color(0xFF789922)
                             )
                         )
                     ),

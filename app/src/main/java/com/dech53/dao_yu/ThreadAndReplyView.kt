@@ -265,7 +265,8 @@ class ThreadAndReplyView : ComponentActivity() {
                                                             htmlContent = reply.content,
                                                             maxLines = Int.MAX_VALUE,
                                                             viewModel = viewModel,
-                                                            context = context
+                                                            context = context,
+                                                            posterName = poster
                                                         )
                                                         if (reply.img != "") {
                                                             AsyncImage(

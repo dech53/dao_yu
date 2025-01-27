@@ -12,6 +12,8 @@ import com.dech53.dao_yu.models.toReplies
 import com.dech53.dao_yu.utils.Http_request
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 class ThreadInfoView_ViewModel : ViewModel() {
@@ -67,14 +69,19 @@ class ThreadInfoView_ViewModel : ViewModel() {
         }
     }
 
-
+    private val requestMutex = Mutex()
     fun getRef(id: String) {
         viewModelScope.launch {
             try {
-                contentContext[id] =
-                    withContext(Dispatchers.IO) {
-                        Http_request.getRef(id, hash.value)!!
+                Log.d("contains test",contentContext.contains(id).toString())
+                if (!contentContext.contains(id)){
+                    requestMutex.withLock {
+                        contentContext[id] =
+                            withContext(Dispatchers.IO) {
+                                Http_request.getRef(id, hash.value)!!
+                            }
                     }
+                }
             } catch (e: Exception) {
                 Log.e("ref esception", e.message.toString())
             }
