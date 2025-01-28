@@ -89,6 +89,12 @@ class CookieViewModel(
                     )
                 }
             }
+
+            is CookieEvent.SetVerifyCookie -> {
+                viewModelScope.launch {
+                    cookieDao.setVerifyCookie(event.cookie)
+                }
+            }
         }
     }
 }

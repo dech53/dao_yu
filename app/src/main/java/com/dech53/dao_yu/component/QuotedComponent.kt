@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,24 +57,25 @@ fun QuotedComponent(
                         .fillMaxSize()
                         .padding(top = 8.dp)
                 ) {
-                    Row(
-                        horizontalArrangement = Arrangement.Start
-                    ) {
-                        if (quoteRef.user_hash == posterName)
+                    if (quoteRef.user_hash!="") {
+                        Row(
+                            horizontalArrangement = Arrangement.Start
+                        ) {
+                            if (quoteRef.user_hash == posterName)
+                                Text(
+                                    "Po",
+                                    fontWeight = FontWeight.W500,
+                                    fontSize = 11.sp,
+                                    color = Color.Red,
+                                )
+                            Spacer(modifier = Modifier.padding(3.dp))
                             Text(
-                                "Po",
-                                fontWeight = FontWeight.W500,
+                                text = quoteRef.user_hash,
                                 fontSize = 11.sp,
-                                color = Color.Red,
+                                fontWeight = FontWeight.Bold
                             )
-                        Spacer(modifier = Modifier.padding(3.dp))
-                        Text(
-                            text = quoteRef.user_hash,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        }
                     }
-
                     HtmlTRText(
                         htmlContent = quoteRef.content,
                         viewModel = viewModel,
@@ -91,7 +93,6 @@ fun QuotedComponent(
                     )
                 }
             }
-
             //floating id
             Text(
                 text = ">>No." + quoteRef.id.toString(),

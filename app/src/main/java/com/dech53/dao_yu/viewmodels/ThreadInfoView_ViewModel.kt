@@ -83,7 +83,7 @@ class ThreadInfoView_ViewModel : ViewModel() {
                     }
                 }
             } catch (e: Exception) {
-                Log.e("ref esception", e.message.toString())
+
             }
         }
     }

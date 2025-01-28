@@ -52,6 +52,7 @@ class MainPage_ViewModel(private val cookieDao: CookieDao) : ViewModel() {
     fun initHash() {
         viewModelScope.launch {
             hash.value = cookieDao.getHashToVerify()?.cookie ?: ""
+            Log.d("resume hash",hash.value)
         }
     }
     init {

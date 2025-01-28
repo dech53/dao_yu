@@ -13,3 +13,18 @@ data class QuoteRef(
     val status: String,
     val admin: Int
 )
+fun emptyQuoteRefWithContent(content: String,id: Long): QuoteRef {
+    return QuoteRef(
+        id = id,
+        img = "",
+        ext = "",
+        now = "",
+        user_hash = "",
+        name = "",
+        title = "",
+        content = content,
+        sage = 0,
+        status = "",
+        admin = 0
+    )
+}

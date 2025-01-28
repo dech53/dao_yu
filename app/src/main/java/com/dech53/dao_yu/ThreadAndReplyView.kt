@@ -10,6 +10,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -116,6 +117,7 @@ class ThreadAndReplyView : ComponentActivity() {
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(innerPadding)
+
                     ) {
                         val threadInfo by viewModel.threadInfo
                         val isRefreshing by remember { viewModel.isRefreshing }
@@ -185,6 +187,7 @@ class ThreadAndReplyView : ComponentActivity() {
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .nestedScroll(pullToRefreshState.nestedScrollConnection)
+
                                 ) {
                                     LazyColumn(
                                         state = lazyListState,
@@ -215,9 +218,10 @@ class ThreadAndReplyView : ComponentActivity() {
                                                 Surface(
                                                     shape = MaterialTheme.shapes.small,
                                                     color = MaterialTheme.colorScheme.surfaceContainerLow,
-
+                                                    shadowElevation = 2.dp,
+                                                    border = BorderStroke(width = 1.dp, color = MaterialTheme.colorScheme.primary),
                                                     modifier = Modifier
-                                                        .padding(all = 5.dp)
+                                                        .padding(horizontal = 13.dp, vertical = 8.dp)
                                                         .fillMaxWidth()
                                                         .combinedClickable(
                                                             onClick = {},

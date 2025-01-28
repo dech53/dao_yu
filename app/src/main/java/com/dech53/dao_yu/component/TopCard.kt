@@ -2,6 +2,7 @@ package com.dech53.dao_yu.component
 
 import android.os.Build.VERSION.SDK_INT
 import android.util.Log
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -67,9 +68,11 @@ fun Forum_card(
     }
     Surface(
         shape = MaterialTheme.shapes.medium,
+        border = BorderStroke(width = 1.dp, color = MaterialTheme.colorScheme.primary),
+        shadowElevation = 2.dp,
         color = MaterialTheme.colorScheme.surfaceContainerLow,
         modifier = Modifier
-            .padding(all = 5.dp)
+            .padding(horizontal = 13.dp, vertical = 8.dp)
             .fillMaxWidth()
             .clickable {
                 cardClickAction()

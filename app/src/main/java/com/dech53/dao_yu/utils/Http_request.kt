@@ -3,12 +3,14 @@ package com.dech53.dao_yu.utils
 import android.util.Log
 import com.dech53.dao_yu.models.QuoteRef
 import com.dech53.dao_yu.models.Thread
+import com.dech53.dao_yu.models.emptyQuoteRefWithContent
 import com.dech53.dao_yu.static.Url
 import okhttp3.CookieJar
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import com.squareup.moshi.*
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
 object Http_request {
@@ -86,7 +88,15 @@ object Http_request {
         val response = call.execute()
         val responseBody = response.body?.string() ?: ""
         Log.d("request data", responseBody)
-        //body process
-        return adapter.fromJson(responseBody)
+        try {
+            val quoteRef =  adapter.fromJson(responseBody)
+            return quoteRef
+        }catch (e:Exception){
+            val json = JSONObject(responseBody)
+            Log.d("json",json.toString())
+            Log.d("json",json.getString("error"))
+           return  emptyQuoteRefWithContent("<font color=\"#FF0000\">${json.getString("error")}</font>",id.toLong())
+        }
+        return emptyQuoteRefWithContent("未知错误",id.toLong())
     }
 }

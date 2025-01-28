@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Upsert
 import com.dech53.dao_yu.models.Cookie
 import kotlinx.coroutines.flow.Flow
 
@@ -21,4 +22,7 @@ interface CookieDao {
 
     @Query("SELECT * FROM cookie WHERE isToVerify = 1")
     suspend fun getHashToVerify(): Cookie
+
+    @Query("UPDATE cookie SET isToVerify = CASE WHEN cookie = :cookieId THEN 1 ELSE 0 END")
+    suspend fun setVerifyCookie(cookieId: String)
 }

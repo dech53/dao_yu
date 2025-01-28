@@ -8,4 +8,5 @@ sealed interface CookieEvent {
     object GetCookies : CookieEvent
     data class DeleteCookie(val cookie: String) : CookieEvent
     object GetHashToVerify : CookieEvent
+    data class SetVerifyCookie(val cookie: String) : CookieEvent
 }

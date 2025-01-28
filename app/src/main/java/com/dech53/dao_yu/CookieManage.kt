@@ -13,18 +13,23 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -55,7 +60,7 @@ import com.dech53.dao_yu.dao.CookieEvent
 class CookieManage : ComponentActivity() {
     private val qrResult = mutableStateOf("")
     private val cookie = mutableStateOf(Cookie(0, "", ""))
-    var yijing = mutableStateOf(false)
+
 
     private val viewModel by viewModels<CookieViewModel>(
         factoryProducer = {
@@ -79,11 +84,10 @@ class CookieManage : ComponentActivity() {
             qrResult.value = result.contents
             val jsonObject = JSONObject(qrResult.value)
             cookie.value = Cookie(
-                if (!yijing.value) 1 else 0,
+                 0,
                 jsonObject.getString("cookie"),
                 jsonObject.getString("name")
             )
-            yijing.value = true
             viewModel.onEvent(CookieEvent.SetCookie(cookie.value.cookie))
             viewModel.onEvent(CookieEvent.SetIsToVerify(cookie.value.isToVerify))
             viewModel.onEvent(CookieEvent.SetName(cookie.value.name))
@@ -183,16 +187,53 @@ fun CookiePage(
             .padding(padding)
     ) {
         Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(all = 15.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            state.cookies.forEach { cookie ->
-                Column(modifier = Modifier
-                    .clickable {
-                        onEvent(CookieEvent.DeleteCookie(cookie.cookie))
+            state.cookies.forEachIndexed { index, cookie ->
+                Column(
+                    modifier = Modifier
+                        .padding(horizontal = 15.dp, vertical = 8.dp)
+                        .clickable {
+                            onEvent(CookieEvent.SetVerifyCookie(cookie.cookie))
+                        }
+                ) {
+                    Surface(
+                        shape = MaterialTheme.shapes.medium,
+                        modifier = Modifier.fillMaxWidth(),
+                        shadowElevation = 3.dp,
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(5.dp),
+                        ) {
+                            Row {
+                                Icon(
+                                    imageVector = ImageVector.vectorResource(id = if (cookie.isToVerify == 1) R.drawable.baseline_cookie_24 else R.drawable.outline_cookie_24),
+                                    contentDescription = "cookie is selected"
+                                )
+                                Spacer(modifier = Modifier.width(5.dp))
+                                Text(text = cookie.name)
+                                Spacer(modifier = Modifier.width(5.dp))
+                                if(cookie.isToVerify == 1)
+                                    Text(text = "鉴权", color = MaterialTheme.colorScheme.primary)
+                            }
+                            IconButton(onClick = {
+                                onEvent(CookieEvent.DeleteCookie(cookie.cookie))
+                                Log.d("delete button test", cookie.name)
+                            }) {
+                                Icon(
+                                    imageVector = ImageVector.vectorResource(id = R.drawable.baseline_delete_forever_24),
+                                    contentDescription = "delete cookie"
+                                )
+                            }
+                        }
                     }
-                    .padding(vertical = 15.dp)) {
-                    Text(text = cookie.name)
                 }
             }
             Button(onClick = { addAction() }) {
