@@ -16,13 +16,21 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,12 +39,15 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
@@ -55,6 +66,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -66,6 +78,7 @@ import com.dech53.dao_yu.component.MainButtonItems
 import com.dech53.dao_yu.component.PullToRefreshLazyColumn
 import com.dech53.dao_yu.dao.CookieDatabase
 import com.dech53.dao_yu.static.forumCategories
+import com.dech53.dao_yu.static.xDaoPhrases
 import com.dech53.dao_yu.viewmodels.CookieViewModel
 import com.dech53.dao_yu.viewmodels.MainPage_ViewModel
 import com.dech53.dao_yu.views.SearchView
@@ -126,8 +139,7 @@ fun Main_Page(padding: PaddingValues, viewModel: MainPage_ViewModel, hash: Strin
                     indication = null
                 ) {
                     viewModel.loadData()
-                }
-                ,
+                },
             contentAlignment = Alignment.Center,
         ) {
             Text(
@@ -145,8 +157,7 @@ fun Main_Page(padding: PaddingValues, viewModel: MainPage_ViewModel, hash: Strin
     } else if (dataState == null) {
         Box(
             modifier = Modifier
-                .fillMaxSize()
-                ,
+                .fillMaxSize(),
             contentAlignment = Alignment.Center,
         ) {
             CircularProgressIndicator(
@@ -194,6 +205,7 @@ fun Main_Page(padding: PaddingValues, viewModel: MainPage_ViewModel, hash: Strin
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Main_Screen(viewModel: MainPage_ViewModel, hash: String) {
 
@@ -211,7 +223,7 @@ fun Main_Screen(viewModel: MainPage_ViewModel, hash: String) {
 
     val nowForumId by remember { viewModel.forumId }
 
-
+    var showBottomSheet by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -250,9 +262,9 @@ fun Main_Screen(viewModel: MainPage_ViewModel, hash: String) {
             floatingActionButton = {
                 FloatingActionButton(
                     onClick = {
+                        showBottomSheet = !showBottomSheet
                         Log.d("悬浮按钮点击", "触发")
                     },
-                    shape = CircleShape
                 ) {
                     Icon(
                         imageVector = ImageVector.vectorResource(id = R.drawable.baseline_create_24),
@@ -322,6 +334,57 @@ fun Main_Screen(viewModel: MainPage_ViewModel, hash: String) {
                 }
             }
         ) { innerPadding ->
+            if (showBottomSheet) {
+                ModalBottomSheet(
+                    onDismissRequest = { showBottomSheet = false },
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    tonalElevation = 10.dp
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp)
+                    ) {
+                        Text(
+                            text = "新建串",
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                        OutlinedTextField(
+                            value = "",
+                            onValueChange = {
+                                viewModel.changeThreadContent(it)
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 100.dp),
+                            label = {
+                                Text(
+                                    "串内容",
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            },
+                            placeholder = {
+                                Text(
+                                    "分享你的想法...",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.outline
+                                )
+                            },
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                color = MaterialTheme.colorScheme.onSurface
+                            ),
+                            shape = MaterialTheme.shapes.small,
+                            singleLine = false,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                            keyboardActions = KeyboardActions(
+                                onDone = { /* 处理完成操作 */ }
+                            )
+                        )
+                    }
+                }
+            }
             //navigation route
             NavHost(navController = navController, startDestination = "主页") {
                 composable("主页") {

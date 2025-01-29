@@ -23,6 +23,9 @@ class MainPage_ViewModel(private val cookieDao: CookieDao) : ViewModel() {
     private val _dataState = mutableStateOf<List<Thread>?>(null)
     val dataState: State<List<Thread>?> = _dataState
 
+    var isThread = mutableStateOf(false)
+        private set
+
     var pageId = mutableStateOf(1)
         private set
 
@@ -31,11 +34,17 @@ class MainPage_ViewModel(private val cookieDao: CookieDao) : ViewModel() {
 
     //TODO add dialog to change page id
     var forumId = mutableStateOf("53")
-        private set
 
     var title = mutableStateOf("婆罗门一")
         private set
 
+
+    var threadContent = mutableStateOf("")
+        private set
+
+    fun changeThreadContent(content:String){
+        threadContent.value = content
+    }
 
     var onError = mutableStateOf(false)
         private set
@@ -52,9 +61,10 @@ class MainPage_ViewModel(private val cookieDao: CookieDao) : ViewModel() {
     fun initHash() {
         viewModelScope.launch {
             hash.value = cookieDao.getHashToVerify()?.cookie ?: ""
-            Log.d("resume hash",hash.value)
+            Log.d("resume hash", hash.value)
         }
     }
+
     init {
         initHash()
     }
@@ -66,7 +76,10 @@ class MainPage_ViewModel(private val cookieDao: CookieDao) : ViewModel() {
                 onError.value = false
                 if (_dataState.value == null) {
                     val data = withContext(Dispatchers.IO) {
-                        Http_request.get<Thread>("showf?id=${forumId.value}", hash.value)
+                        Http_request.get<Thread>(
+                            if (!isThread.value) "showf?id=${forumId.value}" else "timeline?id=${forumId.value}",
+                            hash.value
+                        )
                     }
                     _dataState.value = data
                 }
@@ -88,7 +101,10 @@ class MainPage_ViewModel(private val cookieDao: CookieDao) : ViewModel() {
                 }
                 onError.value = false
                 val newData = withContext(Dispatchers.IO) {
-                    Http_request.get<Thread>("showf?id=${forumId.value}", hash.value)
+                    Http_request.get<Thread>(
+                        if (!isThread.value) "showf?id=${forumId.value}" else "timeline?id=${forumId.value}",
+                        hash.value
+                    )
                 }
                 _dataState.value = newData
                 resetPageId()
@@ -103,6 +119,8 @@ class MainPage_ViewModel(private val cookieDao: CookieDao) : ViewModel() {
     }
 
     fun changeForumId(id: String, showIcon: Boolean) {
+        if (id in setOf("1", "2", "3")) isThread.value = true
+        else isThread.value = false
         if (forumId.value != id) {
             forumId.value = id
             refreshData(showIcon)
@@ -125,7 +143,7 @@ class MainPage_ViewModel(private val cookieDao: CookieDao) : ViewModel() {
             pageId.value++
             val newData = withContext(Dispatchers.IO) {
                 Http_request.get<Thread>(
-                    "showf?id=${forumId.value}&page=${pageId.value}",
+                    if (!isThread.value) "showf?id=${forumId.value}&page=${pageId.value}" else "timeline?id=${forumId.value}&page=${pageId.value}",
                     hash.value
                 )
             }

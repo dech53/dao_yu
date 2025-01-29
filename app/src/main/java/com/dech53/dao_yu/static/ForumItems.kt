@@ -14,6 +14,15 @@ data class ForumItem(
 
 val forumCategories = listOf(
     ForumCategory(
+        name = "时间线",
+        id = "999",
+        forums = listOf(
+            ForumItem(id = "1", name = "综合线"),
+            ForumItem(id = "2", name = "创作线"),
+            ForumItem(id = "3", name = "非创作线"),
+        )
+    ),
+    ForumCategory(
         name = "亚文化",
         id = "1",
         forums = listOf(

@@ -108,10 +108,32 @@ class ThreadAndReplyView : ComponentActivity() {
                                         contentDescription = "Back"
                                     )
                                 }
+                            },
+                            actions = {
+                                IconButton(onClick = {
+                                    val sendIntent: Intent = Intent().apply {
+                                        action = Intent.ACTION_SEND
+                                        putExtra(
+                                            Intent.EXTRA_TEXT,
+                                            Url.Thread_Main_URL + threadId
+                                        )
+                                        flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                        type = "text/plain"
+                                    }
+                                    val shareIntent = Intent.createChooser(sendIntent, null)
+                                    context.startActivity(shareIntent)
+                                    Log.d("log thread share link", "${threadId}")
+                                }) {
+                                    Icon(
+                                        imageVector = ImageVector.vectorResource(id = R.drawable.outline_share_24),
+                                        contentDescription = "thread share"
+                                    )
+                                }
                             }
                         )
-                    }
-                ) { innerPadding ->
+                    },
+
+                    ) { innerPadding ->
                     Box(
                         contentAlignment = Alignment.TopCenter,
                         modifier = Modifier
@@ -219,9 +241,15 @@ class ThreadAndReplyView : ComponentActivity() {
                                                     shape = MaterialTheme.shapes.small,
                                                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                                                     shadowElevation = 2.dp,
-                                                    border = BorderStroke(width = 1.dp, color = MaterialTheme.colorScheme.primary),
+                                                    border = BorderStroke(
+                                                        width = 1.dp,
+                                                        color = MaterialTheme.colorScheme.primary
+                                                    ),
                                                     modifier = Modifier
-                                                        .padding(horizontal = 13.dp, vertical = 8.dp)
+                                                        .padding(
+                                                            horizontal = 13.dp,
+                                                            vertical = 8.dp
+                                                        )
                                                         .fillMaxWidth()
                                                         .combinedClickable(
                                                             onClick = {},

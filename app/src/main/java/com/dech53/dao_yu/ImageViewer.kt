@@ -59,7 +59,6 @@ class ImageViewer : ComponentActivity() {
                 ImageViewer(img_Location = imgName!!, onFinish = {
                     Log.d("获取的图片名字", imgName)
                     onBackPressedDispatcher.onBackPressed()
-
                 })
             }
         }
