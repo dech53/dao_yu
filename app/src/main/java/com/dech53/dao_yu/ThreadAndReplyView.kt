@@ -22,18 +22,23 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -43,6 +48,7 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -82,6 +88,8 @@ class ThreadAndReplyView : ComponentActivity() {
         viewModel.hash.value = hash!!
         setContent {
             Dao_yuTheme {
+                var threadContent by remember { viewModel.threadContent }
+                var showBottomSheet by remember { mutableStateOf(false) }
                 val lazyListState = rememberLazyListState()
                 val context = LocalContext.current
                 Scaffold(
@@ -132,8 +140,114 @@ class ThreadAndReplyView : ComponentActivity() {
                             }
                         )
                     },
-
-                    ) { innerPadding ->
+                    bottomBar = {
+                        BottomAppBar(
+                            actions = {
+                                IconButton(onClick = {}) {
+                                    Icon(
+                                        imageVector = ImageVector.vectorResource(R.drawable.outline_favorite_border_24),
+                                        contentDescription = "bottom icon"
+                                    )
+                                }
+                                IconButton(onClick = {}) {
+                                    Icon(
+                                        imageVector = ImageVector.vectorResource(R.drawable.baseline_move_down_24),
+                                        contentDescription = "bottom icon"
+                                    )
+                                }
+                                IconButton(onClick = {
+                                    val sendIntent: Intent = Intent().apply {
+                                        action = Intent.ACTION_SEND
+                                        putExtra(
+                                            Intent.EXTRA_TEXT,
+                                            Url.Thread_Main_URL + threadId
+                                        )
+                                        flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                        type = "text/plain"
+                                    }
+                                    val shareIntent = Intent.createChooser(sendIntent, null)
+                                    context.startActivity(shareIntent)
+                                    Log.d("log thread share link", "${threadId}")
+                                }) {
+                                    Icon(
+                                        imageVector = ImageVector.vectorResource(R.drawable.outline_share_24),
+                                        contentDescription = "bottom icon"
+                                    )
+                                }
+                            },
+                            floatingActionButton = {
+                                FloatingActionButton(onClick = {
+                                    showBottomSheet = !showBottomSheet
+                                }) {
+                                    Icon(
+                                        imageVector = ImageVector.vectorResource(R.drawable.baseline_message_24),
+                                        contentDescription = "reply thread",
+                                    )
+                                }
+                            }
+                        )
+                    }
+                ) { innerPadding ->
+                    if (showBottomSheet) {
+                        ModalBottomSheet(
+                            shape = MaterialTheme.shapes.medium,
+                            onDismissRequest = { showBottomSheet = false },
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            tonalElevation = 10.dp
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(24.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = "回复串",
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(bottom = 16.dp)
+                                )
+                                OutlinedTextField(
+                                    value = threadContent,
+                                    onValueChange = {
+                                        viewModel.changeThreadContent(it)
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(min = 100.dp),
+                                    label = {
+                                        Text(
+                                            "正文",
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    },
+                                    placeholder = {
+                                        Text(
+                                            "分享你的想法...",
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            color = MaterialTheme.colorScheme.outline
+                                        )
+                                    },
+                                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    ),
+                                    shape = MaterialTheme.shapes.small,
+                                    singleLine = false,
+                                )
+                                Button(
+                                    onClick = {
+                                        viewModel.replyThread(
+                                            content = threadContent,
+                                            resto = threadId!!,
+                                            cookie = hash
+                                        )
+                                    }
+                                ) {
+                                    Text(text = "回复")
+                                }
+                            }
+                        }
+                    }
                     Box(
                         contentAlignment = Alignment.TopCenter,
                         modifier = Modifier

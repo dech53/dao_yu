@@ -23,6 +23,12 @@ class ThreadInfoView_ViewModel : ViewModel() {
     var pageId = mutableStateOf(1)
         private set
 
+    var threadContent = mutableStateOf("")
+
+    fun changeThreadContent(content: String) {
+        threadContent.value = content
+    }
+
     var isRefreshing = mutableStateOf(false)
         private set
 
@@ -73,8 +79,8 @@ class ThreadInfoView_ViewModel : ViewModel() {
     fun getRef(id: String) {
         viewModelScope.launch {
             try {
-                Log.d("contains test",contentContext.contains(id).toString())
-                if (!contentContext.contains(id)){
+                Log.d("contains test", contentContext.contains(id).toString())
+                if (!contentContext.contains(id)) {
                     requestMutex.withLock {
                         contentContext[id] =
                             withContext(Dispatchers.IO) {
@@ -122,5 +128,15 @@ class ThreadInfoView_ViewModel : ViewModel() {
 
     fun resetPageId() {
         pageId.value = 1
+    }
+
+    fun replyThread(content: String, resto: String, cookie: String) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                Http_request.replyThread(
+                    content, resto, cookie
+                )
+            }
+        }
     }
 }

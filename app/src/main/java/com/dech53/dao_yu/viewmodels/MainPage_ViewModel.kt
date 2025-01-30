@@ -40,9 +40,8 @@ class MainPage_ViewModel(private val cookieDao: CookieDao) : ViewModel() {
 
 
     var threadContent = mutableStateOf("")
-        private set
 
-    fun changeThreadContent(content:String){
+    fun changeThreadContent(content: String) {
         threadContent.value = content
     }
 
@@ -153,5 +152,14 @@ class MainPage_ViewModel(private val cookieDao: CookieDao) : ViewModel() {
 
     fun resetPageId() {
         pageId.value = 1
+    }
+
+
+    fun postThread(content: String, fid: String, cookie: String) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                Http_request.postThread(content, fid.toInt(), cookie)
+            }
+        }
     }
 }

@@ -88,7 +88,8 @@ fun HtmlTRText(
             if (isMatch) {
                 // 提取 id
                 Log.d("paired text", text)
-                val id = Regex("\\d+").find(Regex("&gt;&gt;No.\\d+").find(text)!!.value)!!.value
+                val regex = Regex("&gt;&gt;(?:No\\.)?(\\d+)")
+                val id = regex.find(text)?.groups?.get(1)?.value ?: ""
                 viewModel.getRef(id)
                 var contentState = remember { viewModel.contentContext }
                 contentState[id]?.let { quoteRef ->

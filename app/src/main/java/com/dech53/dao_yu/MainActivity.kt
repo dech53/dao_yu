@@ -7,14 +7,20 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -31,6 +37,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -47,6 +55,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -208,7 +217,7 @@ fun Main_Page(padding: PaddingValues, viewModel: MainPage_ViewModel, hash: Strin
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Main_Screen(viewModel: MainPage_ViewModel, hash: String) {
-
+    var threadContent by remember { viewModel.threadContent }
     //change bottom Icon
     var selectedItemIndex by rememberSaveable { mutableIntStateOf(0) }
     //navigation action
@@ -222,7 +231,8 @@ fun Main_Screen(viewModel: MainPage_ViewModel, hash: String) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 
     val nowForumId by remember { viewModel.forumId }
-
+    var isForumChooseExpanded by remember { mutableStateOf(false) }
+    var isCookieChooseExpanded by remember { mutableStateOf(false) }
     var showBottomSheet by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     ModalNavigationDrawer(
@@ -336,6 +346,7 @@ fun Main_Screen(viewModel: MainPage_ViewModel, hash: String) {
         ) { innerPadding ->
             if (showBottomSheet) {
                 ModalBottomSheet(
+                    shape = MaterialTheme.shapes.medium,
                     onDismissRequest = { showBottomSheet = false },
                     containerColor = MaterialTheme.colorScheme.surfaceContainer,
                     tonalElevation = 10.dp
@@ -343,7 +354,8 @@ fun Main_Screen(viewModel: MainPage_ViewModel, hash: String) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(24.dp)
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
                             text = "新建串",
@@ -352,7 +364,7 @@ fun Main_Screen(viewModel: MainPage_ViewModel, hash: String) {
                             modifier = Modifier.padding(bottom = 16.dp)
                         )
                         OutlinedTextField(
-                            value = "",
+                            value = threadContent,
                             onValueChange = {
                                 viewModel.changeThreadContent(it)
                             },
@@ -361,7 +373,7 @@ fun Main_Screen(viewModel: MainPage_ViewModel, hash: String) {
                                 .heightIn(min = 100.dp),
                             label = {
                                 Text(
-                                    "串内容",
+                                    "正文",
                                     color = MaterialTheme.colorScheme.primary
                                 )
                             },
@@ -377,11 +389,18 @@ fun Main_Screen(viewModel: MainPage_ViewModel, hash: String) {
                             ),
                             shape = MaterialTheme.shapes.small,
                             singleLine = false,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                            keyboardActions = KeyboardActions(
-                                onDone = { /* 处理完成操作 */ }
-                            )
                         )
+                        Button(
+                            onClick = {
+                                viewModel.postThread(
+                                    content = threadContent,
+                                    fid = "117",
+                                    cookie = hash
+                                )
+                            }
+                        ) {
+                            Text(text = "发布")
+                        }
                     }
                 }
             }

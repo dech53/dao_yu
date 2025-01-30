@@ -10,6 +10,10 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import com.squareup.moshi.*
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import okhttp3.FormBody
+import okhttp3.MediaType
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
@@ -77,7 +81,7 @@ object Http_request {
         return adapter.fromJson(responseBody)
     }
 
-    fun getRef(id: String,cookie: String): QuoteRef? {
+    fun getRef(id: String, cookie: String): QuoteRef? {
         val adapter = moshi.adapter<QuoteRef>(QuoteRef::class.java)
         val request = Request.Builder()
             .get()
@@ -89,14 +93,47 @@ object Http_request {
         val responseBody = response.body?.string() ?: ""
         Log.d("request data", responseBody)
         try {
-            val quoteRef =  adapter.fromJson(responseBody)
+            val quoteRef = adapter.fromJson(responseBody)
             return quoteRef
-        }catch (e:Exception){
+        } catch (e: Exception) {
             val json = JSONObject(responseBody)
-            Log.d("json",json.toString())
-            Log.d("json",json.getString("error"))
-           return  emptyQuoteRefWithContent("<font color=\"#FF0000\">${json.getString("error")}</font>",id.toLong())
+            Log.d("json", json.toString())
+            Log.d("json", json.getString("error"))
+            return emptyQuoteRefWithContent(
+                "<font color=\"#FF0000\">${json.getString("error")}</font>",
+                id.toLong()
+            )
         }
-        return emptyQuoteRefWithContent("未知错误",id.toLong())
+        return emptyQuoteRefWithContent("未知错误", id.toLong())
+    }
+
+    fun postThread(content: String, fid: Int, cookie: String) {
+        val requestData = FormBody.Builder()
+            .add("content", content)
+            .add("fid", fid.toString())
+            .build()
+        val mediaType = "text/html;charset=utf-8".toMediaType()
+        val request = Request.Builder()
+            .addHeader("Cookie", "userhash=${cookie}")
+            .url(Url.Post_Thread_URL)
+            .post(requestData)
+            .build()
+        val call = client.newCall(request)
+        call.execute()
+    }
+
+    fun replyThread(content: String, resto: String, cookie: String) {
+        val requestData = FormBody.Builder()
+            .add("content", content)
+            .add("resto", resto)
+            .build()
+        val mediaType = "text/html;charset=utf-8".toMediaType()
+        val request = Request.Builder()
+            .addHeader("Cookie", "userhash=${cookie}")
+            .url(Url.Reply_Thread_URL)
+            .post(requestData)
+            .build()
+        val call = client.newCall(request)
+        call.execute()
     }
 }
