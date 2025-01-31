@@ -86,6 +86,7 @@ import com.dech53.dao_yu.component.ForumCategoryDialog
 import com.dech53.dao_yu.component.MainButtonItems
 import com.dech53.dao_yu.component.PullToRefreshLazyColumn
 import com.dech53.dao_yu.dao.CookieDatabase
+import com.dech53.dao_yu.models.Cookie
 import com.dech53.dao_yu.static.forumCategories
 import com.dech53.dao_yu.static.xDaoPhrases
 import com.dech53.dao_yu.viewmodels.CookieViewModel
@@ -116,7 +117,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             Dao_yuTheme {
-                Main_Screen(viewModel, viewModel.hash.value)
+                Main_Screen(viewModel, viewModel.cookie.value)
             }
         }
     }
@@ -131,7 +132,7 @@ class MainActivity : ComponentActivity() {
 
 
 @Composable
-fun Main_Page(padding: PaddingValues, viewModel: MainPage_ViewModel, hash: String) {
+fun Main_Page(padding: PaddingValues, viewModel: MainPage_ViewModel, cookie: Cookie?) {
     val dataState by viewModel.dataState
     val isRefreshing by remember { viewModel.isRefreshing }
     val interactionSource = remember { MutableInteractionSource() }
@@ -193,7 +194,8 @@ fun Main_Page(padding: PaddingValues, viewModel: MainPage_ViewModel, hash: Strin
                     }, cardClickAction = {
                         val intent = Intent(context, ThreadAndReplyView::class.java)
                         intent.putExtra("threadId", item.id.toString())
-                        intent.putExtra("hash", hash)
+                        intent.putExtra("hash", cookie?.cookie?:"")
+                        intent.putExtra("name", cookie?.name?:"")
                         context.startActivity(intent)
                     }, stricted = true, posterName = "")
                 },
@@ -216,7 +218,7 @@ fun Main_Page(padding: PaddingValues, viewModel: MainPage_ViewModel, hash: Strin
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Main_Screen(viewModel: MainPage_ViewModel, hash: String) {
+fun Main_Screen(viewModel: MainPage_ViewModel, cookie:Cookie?) {
     var threadContent by remember { viewModel.threadContent }
     //change bottom Icon
     var selectedItemIndex by rememberSaveable { mutableIntStateOf(0) }
@@ -395,7 +397,7 @@ fun Main_Screen(viewModel: MainPage_ViewModel, hash: String) {
                                 viewModel.postThread(
                                     content = threadContent,
                                     fid = "117",
-                                    cookie = hash
+                                    cookie = cookie?.cookie?:""
                                 )
                             }
                         ) {
@@ -410,7 +412,7 @@ fun Main_Screen(viewModel: MainPage_ViewModel, hash: String) {
                     Main_Page(
                         padding = innerPadding,
                         viewModel = viewModel,
-                        hash = hash
+                        cookie = cookie
                     )
                 }
                 composable("设置") { SettingsView(padding = innerPadding) }

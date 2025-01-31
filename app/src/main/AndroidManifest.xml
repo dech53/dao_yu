@@ -24,6 +24,7 @@
             android:label="@string/title_activity_cookie_manage"
             android:theme="@style/Theme.Dao_yu" />
         <activity
+            android:windowSoftInputMode="adjustResize"
             android:name=".ThreadAndReplyView"
             android:exported="false"
             android:label="@string/title_activity_thread_and_reply_view"

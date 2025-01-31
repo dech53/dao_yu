@@ -6,12 +6,15 @@ import android.content.Intent
 import android.os.Build.VERSION.SDK_INT
 import android.os.Bundle
 import android.util.Log
+import android.view.ViewTreeObserver
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -20,19 +23,38 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsBottomHeight
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -42,9 +64,13 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -54,13 +80,22 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -68,12 +103,15 @@ import coil3.ImageLoader
 import coil3.compose.AsyncImage
 import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
+import com.dech53.dao_yu.component.CustomExposedDropMenu
 import com.dech53.dao_yu.component.HtmlTRText
 import com.dech53.dao_yu.component.TRCard
 import com.dech53.dao_yu.static.Url
+import com.dech53.dao_yu.static.xDaoPhrases
 import com.dech53.dao_yu.ui.theme.Dao_yuTheme
 import com.dech53.dao_yu.viewmodels.ThreadInfoView_ViewModel
 import com.dech53.dao_yu.views.ThreadInfoView
+import kotlinx.coroutines.delay
 
 class ThreadAndReplyView : ComponentActivity() {
     private val viewModel: ThreadInfoView_ViewModel by viewModels()
@@ -84,7 +122,7 @@ class ThreadAndReplyView : ComponentActivity() {
         enableEdgeToEdge()
         val threadId = intent.getStringExtra("threadId")
         val hash = intent.getStringExtra("hash")
-
+        val currentName = intent.getStringExtra("name")
         viewModel.hash.value = hash!!
         setContent {
             Dao_yuTheme {
@@ -92,6 +130,7 @@ class ThreadAndReplyView : ComponentActivity() {
                 var showBottomSheet by remember { mutableStateOf(false) }
                 val lazyListState = rememberLazyListState()
                 val context = LocalContext.current
+
                 Scaffold(
                     topBar = {
                         TopAppBar(
@@ -190,62 +229,73 @@ class ThreadAndReplyView : ComponentActivity() {
                 ) { innerPadding ->
                     if (showBottomSheet) {
                         ModalBottomSheet(
-                            shape = MaterialTheme.shapes.medium,
-                            onDismissRequest = { showBottomSheet = false },
+                            onDismissRequest = {
+                                showBottomSheet = false
+                            },
                             containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                            tonalElevation = 10.dp
+                            windowInsets = WindowInsets(0),
+                            modifier = Modifier.imePadding()
                         ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(24.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
+                            val focusRequester = remember { FocusRequester() }
+                            val keyboardController = LocalSoftwareKeyboardController.current
+                            LaunchedEffect (showBottomSheet){
+                                if (showBottomSheet){
+                                    focusRequester.requestFocus()
+                                }
+                            }
+                            Row(horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text(
                                     text = "回复串",
+                                    fontWeight = FontWeight.Bold,
                                     style = MaterialTheme.typography.headlineSmall,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.padding(bottom = 16.dp)
+                                    color = MaterialTheme.colorScheme.primary,modifier=Modifier.fillMaxWidth().padding(horizontal = 16.dp)
                                 )
+                                //disply choosed img
+                            }
+                            Column (
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier=Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                            ){
                                 OutlinedTextField(
                                     value = threadContent,
+                                    modifier = Modifier.focusRequester(focusRequester = focusRequester).height(100.dp).fillMaxSize(),
                                     onValueChange = {
                                         viewModel.changeThreadContent(it)
                                     },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .heightIn(min = 100.dp),
                                     label = {
-                                        Text(
-                                            "正文",
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                    },
-                                    placeholder = {
-                                        Text(
-                                            "分享你的想法...",
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            color = MaterialTheme.colorScheme.outline
-                                        )
-                                    },
-                                    textStyle = MaterialTheme.typography.bodyLarge.copy(
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    ),
-                                    shape = MaterialTheme.shapes.small,
-                                    singleLine = false,
-                                )
-                                Button(
-                                    onClick = {
-                                        viewModel.replyThread(
-                                            content = threadContent,
-                                            resto = threadId!!,
-                                            cookie = hash
-                                        )
+                                        Text("正文",color = MaterialTheme.colorScheme.primary)
                                     }
-                                ) {
-                                    Text(text = "回复")
-                                }
+                                )
                             }
+                            //emoji grid
+//                                Box(
+//                                    modifier = Modifier
+//                                        .height(300.dp)
+//                                        .fillMaxWidth()
+//                                ) {
+//                                    LazyVerticalGrid(
+//                                        columns = GridCells.Fixed(3),
+//                                        modifier = Modifier
+//                                            .padding(8.dp)
+//                                            .fillMaxSize(),
+//                                        verticalArrangement = Arrangement.spacedBy(8.dp),
+//                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+//                                    ) {
+//                                        items(xDaoPhrases) { phrase ->
+//                                            Text(
+//                                                text = phrase.display,
+//                                                modifier = Modifier
+//                                                    .padding(4.dp)
+//                                                    .clickable {
+//                                                        viewModel.changeThreadContent(threadContent + phrase.value)
+//                                                    },
+//                                                style = MaterialTheme.typography.bodyMedium,
+//                                                color = MaterialTheme.colorScheme.onSurface
+//                                            )
+//                                        }
+//                                    }
+//                                }
                         }
                     }
                     Box(
@@ -372,6 +422,7 @@ class ThreadAndReplyView : ComponentActivity() {
                                                                     "TR卡片长按",
                                                                     "触发${reply.id}"
                                                                 )
+                                                                viewModel.changeThreadContent(">>No.${reply.id}")
                                                             }
                                                         )
                                                 ) {
@@ -388,13 +439,21 @@ class ThreadAndReplyView : ComponentActivity() {
                                                                         fontSize = 11.sp,
                                                                         color = Color.Red,
                                                                     )
-                                                                Spacer(modifier = Modifier.padding(3.dp))
+                                                                Spacer(
+                                                                    modifier = Modifier.padding(
+                                                                        3.dp
+                                                                    )
+                                                                )
                                                                 Text(
                                                                     text = date_,
                                                                     fontWeight = FontWeight.W500,
                                                                     fontSize = 11.sp
                                                                 )
-                                                                Spacer(modifier = Modifier.padding(3.dp))
+                                                                Spacer(
+                                                                    modifier = Modifier.padding(
+                                                                        3.dp
+                                                                    )
+                                                                )
                                                                 Text(
                                                                     text = reply.user_hash,
                                                                     fontWeight = FontWeight.Bold,
@@ -405,6 +464,14 @@ class ThreadAndReplyView : ComponentActivity() {
                                                                 text = "No.${reply.id}",
                                                                 fontWeight = FontWeight.W500,
                                                                 fontSize = 11.sp
+                                                            )
+                                                        }
+                                                        if (reply.title != "无标题") {
+                                                            Text(
+                                                                text = reply.title,
+                                                                color = MaterialTheme.colorScheme.primary,
+                                                                fontSize = 18.sp,
+                                                                fontWeight = FontWeight.Bold
                                                             )
                                                         }
                                                         HtmlTRText(
@@ -433,7 +500,9 @@ class ThreadAndReplyView : ComponentActivity() {
                                                                             "imgName",
                                                                             reply.img + reply.ext
                                                                         )
-                                                                        context.startActivity(intent)
+                                                                        context.startActivity(
+                                                                            intent
+                                                                        )
                                                                     }
                                                                     .clip(MaterialTheme.shapes.small),
                                                                 placeholder = painterResource(id = R.drawable.apple_touch_icon)

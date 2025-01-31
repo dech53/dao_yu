@@ -54,13 +54,10 @@ class MainPage_ViewModel(private val cookieDao: CookieDao) : ViewModel() {
 //    private val cookieDao = db.cookieDao
 //
 
-    var hash = mutableStateOf("")
-
-
+    var cookie = mutableStateOf<Cookie?>(null)
     fun initHash() {
         viewModelScope.launch {
-            hash.value = cookieDao.getHashToVerify()?.cookie ?: ""
-            Log.d("resume hash", hash.value)
+            cookie.value = cookieDao.getHashToVerify()
         }
     }
 
@@ -77,7 +74,7 @@ class MainPage_ViewModel(private val cookieDao: CookieDao) : ViewModel() {
                     val data = withContext(Dispatchers.IO) {
                         Http_request.get<Thread>(
                             if (!isThread.value) "showf?id=${forumId.value}" else "timeline?id=${forumId.value}",
-                            hash.value
+                            cookie.value?.cookie ?: ""
                         )
                     }
                     _dataState.value = data
@@ -102,7 +99,7 @@ class MainPage_ViewModel(private val cookieDao: CookieDao) : ViewModel() {
                 val newData = withContext(Dispatchers.IO) {
                     Http_request.get<Thread>(
                         if (!isThread.value) "showf?id=${forumId.value}" else "timeline?id=${forumId.value}",
-                        hash.value
+                        cookie.value?.cookie ?: ""
                     )
                 }
                 _dataState.value = newData
@@ -143,7 +140,7 @@ class MainPage_ViewModel(private val cookieDao: CookieDao) : ViewModel() {
             val newData = withContext(Dispatchers.IO) {
                 Http_request.get<Thread>(
                     if (!isThread.value) "showf?id=${forumId.value}&page=${pageId.value}" else "timeline?id=${forumId.value}&page=${pageId.value}",
-                    hash.value
+                    cookie.value?.cookie ?: ""
                 )
             }
             _dataState.value = (_dataState.value.orEmpty() + newData!!)

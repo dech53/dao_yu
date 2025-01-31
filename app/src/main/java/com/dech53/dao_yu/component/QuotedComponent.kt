@@ -41,7 +41,7 @@ fun QuotedComponent(
     if (isExpanded.value) {
         Box(
             modifier = Modifier
-                .padding(top = 16.dp)
+                .padding(top = 10.dp)
         ) {
             Box(
                 modifier = Modifier
@@ -50,12 +50,12 @@ fun QuotedComponent(
                         color = Color(0xFF789922),
                         shape = MaterialTheme.shapes.extraSmall
                     )
-                    .padding(all = 8.dp)
+                    .padding(all = 5.dp)
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(top = 8.dp)
+                        .padding(top = 5.dp)
                 ) {
                     if (quoteRef.user_hash!="") {
                         Row(

@@ -118,8 +118,14 @@ fun Forum_card(
 
                 }
             }
+            if (thread.title != "无标题") {
+                Text(text = thread.title, color = MaterialTheme.colorScheme.primary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            }
             //make the html code show in the card component
-            CommonHtmlText(htmlContent = thread.content, maxLines = if (stricted) 6 else Int.MAX_VALUE)
+            CommonHtmlText(
+                htmlContent = thread.content,
+                maxLines = if (stricted) 6 else Int.MAX_VALUE
+            )
 
             if (thread.img != "") {
                 //TODO Add click action on img
