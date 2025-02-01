@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun CustomExposedDropMenu(itemList: List<String>) {
     var dropMenuExpanded by remember { mutableStateOf(false) }
-    var selected by remember { mutableStateOf(itemList[1]) }
+    var selected by remember { mutableStateOf(itemList[0]) }
     ExposedDropdownMenuBox(
         expanded = dropMenuExpanded,
         onExpandedChange = { dropMenuExpanded = !dropMenuExpanded }

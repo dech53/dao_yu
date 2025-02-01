@@ -4,6 +4,8 @@ import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dech53.dao_yu.models.QuoteRef
@@ -23,10 +25,17 @@ class ThreadInfoView_ViewModel : ViewModel() {
     var pageId = mutableStateOf(1)
         private set
 
-    var threadContent = mutableStateOf("")
+    private val _textFieldValue = mutableStateOf(TextFieldValue())
+    val textFieldValue: State<TextFieldValue> get() = _textFieldValue
 
-    fun changeThreadContent(content: String) {
-        threadContent.value = content
+    fun updateTextFieldValue(newTextFieldValue: TextFieldValue) {
+        _textFieldValue.value = newTextFieldValue
+    }
+
+    fun appendToTextField(emojiOrReference: String) {
+        val currentText = _textFieldValue.value.text
+        val newText = currentText + emojiOrReference
+        _textFieldValue.value = TextFieldValue(newText, TextRange(newText.length, newText.length))
     }
 
     var isRefreshing = mutableStateOf(false)

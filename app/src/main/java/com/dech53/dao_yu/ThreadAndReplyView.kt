@@ -7,6 +7,7 @@ import android.os.Build.VERSION.SDK_INT
 import android.os.Bundle
 import android.util.Log
 import android.view.ViewTreeObserver
+import android.widget.Space
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -89,16 +90,20 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.rememberNestedScrollInteropConnection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowInsetsCompat
 import coil3.ImageLoader
 import coil3.compose.AsyncImage
 import coil3.gif.AnimatedImageDecoder
@@ -112,6 +117,8 @@ import com.dech53.dao_yu.ui.theme.Dao_yuTheme
 import com.dech53.dao_yu.viewmodels.ThreadInfoView_ViewModel
 import com.dech53.dao_yu.views.ThreadInfoView
 import kotlinx.coroutines.delay
+import kotlin.math.min
+import kotlin.reflect.jvm.internal.impl.descriptors.Visibilities.Local
 
 class ThreadAndReplyView : ComponentActivity() {
     private val viewModel: ThreadInfoView_ViewModel by viewModels()
@@ -126,7 +133,6 @@ class ThreadAndReplyView : ComponentActivity() {
         viewModel.hash.value = hash!!
         setContent {
             Dao_yuTheme {
-                var threadContent by remember { viewModel.threadContent }
                 var showBottomSheet by remember { mutableStateOf(false) }
                 val lazyListState = rememberLazyListState()
                 val context = LocalContext.current
@@ -227,6 +233,7 @@ class ThreadAndReplyView : ComponentActivity() {
                         )
                     }
                 ) { innerPadding ->
+                    val configuration = LocalConfiguration.current
                     if (showBottomSheet) {
                         ModalBottomSheet(
                             onDismissRequest = {
@@ -234,12 +241,15 @@ class ThreadAndReplyView : ComponentActivity() {
                             },
                             containerColor = MaterialTheme.colorScheme.surfaceContainer,
                             windowInsets = WindowInsets(0),
-                            modifier = Modifier.imePadding()
+                            modifier = Modifier.heightIn(
+                                max = (configuration.screenHeightDp / 1.5).dp
+                            )
                         ) {
                             val focusRequester = remember { FocusRequester() }
                             val keyboardController = LocalSoftwareKeyboardController.current
-                            LaunchedEffect (showBottomSheet){
-                                if (showBottomSheet){
+                            LaunchedEffect(showBottomSheet) {
+                                if (showBottomSheet) {
+                                    delay(150)
                                     focusRequester.requestFocus()
                                 }
                             }
@@ -248,54 +258,123 @@ class ThreadAndReplyView : ComponentActivity() {
                                     text = "回复串",
                                     fontWeight = FontWeight.Bold,
                                     style = MaterialTheme.typography.headlineSmall,
-                                    color = MaterialTheme.colorScheme.primary,modifier=Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp)
+                                        .padding(bottom = 10.dp)
                                 )
                                 //disply choosed img
                             }
-                            Column (
+                            Column(
                                 verticalArrangement = Arrangement.Center,
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier=Modifier.fillMaxWidth().padding(horizontal = 16.dp)
-                            ){
-                                OutlinedTextField(
-                                    value = threadContent,
-                                    modifier = Modifier.focusRequester(focusRequester = focusRequester).height(100.dp).fillMaxSize(),
-                                    onValueChange = {
-                                        viewModel.changeThreadContent(it)
-                                    },
-                                    label = {
-                                        Text("正文",color = MaterialTheme.colorScheme.primary)
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 10.dp)
+                                    .imePadding()
+                            ) {
+                                Box (modifier = Modifier.nestedScroll(
+                                    rememberNestedScrollInteropConnection()).height((configuration.screenHeightDp/8).dp)){
+                                    OutlinedTextField(
+                                        value = viewModel.textFieldValue.value,
+                                        modifier = Modifier
+                                            .focusRequester(focusRequester = focusRequester)
+                                            .fillMaxSize(),
+                                        onValueChange = {
+                                            viewModel.updateTextFieldValue(it)
+                                        },
+                                        label = {
+                                            Text("正文", color = MaterialTheme.colorScheme.primary)
+                                        }
+                                    )
+                                }
+
+                                Row(
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    //cookie choose option
+                                    CustomExposedDropMenu(
+                                        itemList = listOf(
+                                            currentName ?: "",
+                                            "饼干1",
+                                            "饼干2",
+                                            "饼干3"
+                                        )
+                                    )
+                                    Row {
+                                        IconButton(
+                                            onClick = {
+                                                keyboardController?.hide()
+                                            },
+                                        ) {
+                                            Icon(
+                                                imageVector = ImageVector.vectorResource(R.drawable.round_tag_faces_24),
+                                                contentDescription = "表情",
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                        // 图标2
+                                        IconButton(
+                                            onClick = { /* 处理第二个图标点击 */ },
+                                        ) {
+                                            Icon(
+                                                imageVector = ImageVector.vectorResource(R.drawable.baseline_image_24),
+                                                contentDescription = "图片",
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                        // 图标3
+                                        IconButton(
+                                            onClick = {
+                                                viewModel.replyThread(
+                                                    content = viewModel.textFieldValue.value.text,
+                                                    resto = threadId!!,
+                                                    cookie = hash
+                                                )
+                                            },
+                                        ) {
+                                            Icon(
+                                                imageVector = ImageVector.vectorResource(R.drawable.round_send_24),
+                                                contentDescription = "发送",
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
                                     }
-                                )
+                                }
                             }
                             //emoji grid
 //                                Box(
 //                                    modifier = Modifier
-//                                        .height(300.dp)
+//                                        .height(200.dp)
 //                                        .fillMaxWidth()
 //                                ) {
-//                                    LazyVerticalGrid(
-//                                        columns = GridCells.Fixed(3),
-//                                        modifier = Modifier
-//                                            .padding(8.dp)
-//                                            .fillMaxSize(),
-//                                        verticalArrangement = Arrangement.spacedBy(8.dp),
-//                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-//                                    ) {
-//                                        items(xDaoPhrases) { phrase ->
-//                                            Text(
-//                                                text = phrase.display,
-//                                                modifier = Modifier
-//                                                    .padding(4.dp)
-//                                                    .clickable {
-//                                                        viewModel.changeThreadContent(threadContent + phrase.value)
-//                                                    },
-//                                                style = MaterialTheme.typography.bodyMedium,
-//                                                color = MaterialTheme.colorScheme.onSurface
-//                                            )
-//                                        }
+                            LazyVerticalGrid(
+                                columns = GridCells.Fixed(3),
+                                modifier = Modifier
+                                    .padding(8.dp)
+                                    .fillMaxSize(),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                items(xDaoPhrases) { phrase ->
+                                    Text(
+                                        text = phrase.display,
+                                        modifier = Modifier
+                                            .padding(4.dp)
+                                            .clickable {
+                                                viewModel.appendToTextField(phrase.value)
+                                            },
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
 //                                    }
-//                                }
+                            }
                         }
                     }
                     Box(
@@ -422,7 +501,7 @@ class ThreadAndReplyView : ComponentActivity() {
                                                                     "TR卡片长按",
                                                                     "触发${reply.id}"
                                                                 )
-                                                                viewModel.changeThreadContent(">>No.${reply.id}")
+                                                                viewModel.appendToTextField(">>No.${reply.id}")
                                                             }
                                                         )
                                                 ) {
