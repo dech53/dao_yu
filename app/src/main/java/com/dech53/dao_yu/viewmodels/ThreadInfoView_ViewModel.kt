@@ -1,5 +1,7 @@
 package com.dech53.dao_yu.viewmodels
 
+import android.content.Context
+import android.net.Uri
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.State
@@ -8,17 +10,21 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dech53.dao_yu.dao.CookieDao
+import com.dech53.dao_yu.models.Cookie
 import com.dech53.dao_yu.models.QuoteRef
 import com.dech53.dao_yu.models.Reply
 import com.dech53.dao_yu.models.toReplies
 import com.dech53.dao_yu.utils.Http_request
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
-class ThreadInfoView_ViewModel : ViewModel() {
+class ThreadInfoView_ViewModel(private val cookieDao: CookieDao) : ViewModel() {
     private val _threadInfo = mutableStateOf<List<Reply>?>(null)
     var threadInfo: State<List<Reply>?> = _threadInfo
 
@@ -36,6 +42,18 @@ class ThreadInfoView_ViewModel : ViewModel() {
         val currentText = _textFieldValue.value.text
         val newText = currentText + emojiOrReference
         _textFieldValue.value = TextFieldValue(newText, TextRange(newText.length, newText.length))
+    }
+
+    var cookieList = MutableStateFlow<List<Cookie>>(emptyList())
+    fun initCookieList(){
+        viewModelScope.launch {
+            cookieDao.getAll().collect { cookies ->
+                cookieList.value = cookies
+            }
+        }
+    }
+    init {
+        initCookieList()
     }
 
     var isRefreshing = mutableStateOf(false)
@@ -139,11 +157,11 @@ class ThreadInfoView_ViewModel : ViewModel() {
         pageId.value = 1
     }
 
-    fun replyThread(content: String, resto: String, cookie: String) {
+    fun replyThread(content: String, resto: String, cookie: String,img: Uri? = null,context: Context) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 Http_request.replyThread(
-                    content, resto, cookie
+                    content, resto, cookie,img,context
                 )
             }
         }

@@ -3,14 +3,18 @@
 package com.dech53.dao_yu
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Build.VERSION.SDK_INT
 import android.os.Bundle
 import android.util.Log
 import android.view.ViewTreeObserver
 import android.widget.Space
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
@@ -74,6 +78,7 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -104,6 +109,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import coil3.ImageLoader
 import coil3.compose.AsyncImage
 import coil3.gif.AnimatedImageDecoder
@@ -111,9 +118,11 @@ import coil3.gif.GifDecoder
 import com.dech53.dao_yu.component.CustomExposedDropMenu
 import com.dech53.dao_yu.component.HtmlTRText
 import com.dech53.dao_yu.component.TRCard
+import com.dech53.dao_yu.dao.CookieDatabase
 import com.dech53.dao_yu.static.Url
 import com.dech53.dao_yu.static.xDaoPhrases
 import com.dech53.dao_yu.ui.theme.Dao_yuTheme
+import com.dech53.dao_yu.viewmodels.MainPage_ViewModel
 import com.dech53.dao_yu.viewmodels.ThreadInfoView_ViewModel
 import com.dech53.dao_yu.views.ThreadInfoView
 import kotlinx.coroutines.delay
@@ -121,7 +130,18 @@ import kotlin.math.min
 import kotlin.reflect.jvm.internal.impl.descriptors.Visibilities.Local
 
 class ThreadAndReplyView : ComponentActivity() {
-    private val viewModel: ThreadInfoView_ViewModel by viewModels()
+    private val viewModel by viewModels<ThreadInfoView_ViewModel>(
+        factoryProducer = {
+            object : ViewModelProvider.Factory {
+                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                    return ThreadInfoView_ViewModel(db.cookieDao) as T
+                }
+            }
+        }
+    )
+    private val db by lazy {
+        CookieDatabase.getDatabase(applicationContext)
+    }
 
     @OptIn(ExperimentalFoundationApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -129,14 +149,13 @@ class ThreadAndReplyView : ComponentActivity() {
         enableEdgeToEdge()
         val threadId = intent.getStringExtra("threadId")
         val hash = intent.getStringExtra("hash")
-        val currentName = intent.getStringExtra("name")
-        viewModel.hash.value = hash!!
+        viewModel.hash.value = hash ?: ""
         setContent {
             Dao_yuTheme {
                 var showBottomSheet by remember { mutableStateOf(false) }
                 val lazyListState = rememberLazyListState()
                 val context = LocalContext.current
-
+                val cookies by viewModel.cookieList.collectAsState()
                 Scaffold(
                     topBar = {
                         TopAppBar(
@@ -234,6 +253,13 @@ class ThreadAndReplyView : ComponentActivity() {
                     }
                 ) { innerPadding ->
                     val configuration = LocalConfiguration.current
+                    var uri by remember {
+                        mutableStateOf<Uri?>(null)
+                    }
+                    val singlePhotoPicker = rememberLauncherForActivityResult(
+                        contract = ActivityResultContracts.PickVisualMedia(),
+                        onResult = { uri = it }
+                    )
                     if (showBottomSheet) {
                         ModalBottomSheet(
                             onDismissRequest = {
@@ -274,22 +300,36 @@ class ThreadAndReplyView : ComponentActivity() {
                                     .padding(horizontal = 10.dp)
                                     .imePadding()
                             ) {
-                                Box (modifier = Modifier.nestedScroll(
-                                    rememberNestedScrollInteropConnection()).height((configuration.screenHeightDp/8).dp)){
-                                    OutlinedTextField(
-                                        value = viewModel.textFieldValue.value,
+                                Row(modifier = Modifier.height((configuration.screenHeightDp / 8).dp)) {
+                                    Box(
                                         modifier = Modifier
-                                            .focusRequester(focusRequester = focusRequester)
-                                            .fillMaxSize(),
-                                        onValueChange = {
-                                            viewModel.updateTextFieldValue(it)
-                                        },
-                                        label = {
-                                            Text("正文", color = MaterialTheme.colorScheme.primary)
-                                        }
+                                            .nestedScroll(
+                                                rememberNestedScrollInteropConnection()
+                                            )
+                                            .fillMaxHeight()
+                                    ) {
+                                        OutlinedTextField(
+                                            value = viewModel.textFieldValue.value,
+                                            modifier = Modifier
+                                                .focusRequester(focusRequester = focusRequester)
+                                                .fillMaxHeight(),
+                                            onValueChange = {
+                                                viewModel.updateTextFieldValue(it)
+                                            },
+                                            label = {
+                                                Text(
+                                                    "正文",
+                                                    color = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
+                                        )
+                                    }
+                                    AsyncImage(
+                                        model = uri,
+                                        contentDescription = "picked photo",
+                                        modifier = Modifier.size(248.dp)
                                     )
                                 }
-
                                 Row(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     modifier = Modifier
@@ -299,12 +339,10 @@ class ThreadAndReplyView : ComponentActivity() {
                                 ) {
                                     //cookie choose option
                                     CustomExposedDropMenu(
-                                        itemList = listOf(
-                                            currentName ?: "",
-                                            "饼干1",
-                                            "饼干2",
-                                            "饼干3"
-                                        )
+                                        itemList = cookies,
+                                        onSelect = { selectedHash ->
+                                            viewModel.hash.value = selectedHash
+                                        }
                                     )
                                     Row {
                                         IconButton(
@@ -320,7 +358,11 @@ class ThreadAndReplyView : ComponentActivity() {
                                         }
                                         // 图标2
                                         IconButton(
-                                            onClick = { /* 处理第二个图标点击 */ },
+                                            onClick = {
+                                                singlePhotoPicker.launch(
+                                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                                )
+                                            },
                                         ) {
                                             Icon(
                                                 imageVector = ImageVector.vectorResource(R.drawable.baseline_image_24),
@@ -334,7 +376,9 @@ class ThreadAndReplyView : ComponentActivity() {
                                                 viewModel.replyThread(
                                                     content = viewModel.textFieldValue.value.text,
                                                     resto = threadId!!,
-                                                    cookie = hash
+                                                    cookie = viewModel.hash.value,
+                                                    img = uri,
+                                                    context = context
                                                 )
                                             },
                                         ) {

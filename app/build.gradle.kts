@@ -65,7 +65,7 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     //moshi json parser
     implementation("com.squareup.moshi:moshi-kotlin:1.15.2")
-    //coli image
+    //coil image
     implementation("io.coil-kt.coil3:coil-compose:3.0.4")
     implementation("io.coil-kt.coil3:coil-network-okhttp:3.0.4")
     implementation("io.coil-kt.coil3:coil-gif:3.0.4")

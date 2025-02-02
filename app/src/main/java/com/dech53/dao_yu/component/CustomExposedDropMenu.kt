@@ -15,11 +15,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dech53.dao_yu.models.Cookie
 
 //后续还要改，直接用textfield太几把丑了
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CustomExposedDropMenu(itemList: List<String>) {
+fun CustomExposedDropMenu(itemList: List<Cookie>, onSelect: (String) -> Unit) {
     var dropMenuExpanded by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf(itemList[0]) }
     ExposedDropdownMenuBox(
@@ -27,7 +28,7 @@ fun CustomExposedDropMenu(itemList: List<String>) {
         onExpandedChange = { dropMenuExpanded = !dropMenuExpanded }
     ) {
         TextField(
-            value = selected,
+            value = selected.name,
             onValueChange = {},
             readOnly = true,
             trailingIcon = {
@@ -44,8 +45,9 @@ fun CustomExposedDropMenu(itemList: List<String>) {
         ) {
             itemList.forEach { item ->
                 DropdownMenuItem(
-                    text = { Text(item, fontSize = 7.sp) },
+                    text = { Text(item.name, fontSize = 15.sp) },
                     onClick = {
+                        onSelect(item.cookie)
                         selected = item
                         dropMenuExpanded = false
                     }

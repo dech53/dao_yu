@@ -1,5 +1,7 @@
 package com.dech53.dao_yu.utils
 
+import android.content.Context
+import android.net.Uri
 import android.util.Log
 import com.dech53.dao_yu.models.QuoteRef
 import com.dech53.dao_yu.models.Thread
@@ -13,14 +15,17 @@ import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import okhttp3.FormBody
 import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
+import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
 object Http_request {
     val client = OkHttpClient().newBuilder()
         .cookieJar(CookieJar.NO_COOKIES)
-        .callTimeout(3, TimeUnit.SECONDS)
+        .callTimeout(30, TimeUnit.SECONDS)
         .build()
     val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
 
@@ -122,17 +127,28 @@ object Http_request {
         call.execute()
     }
 
-    fun replyThread(content: String, resto: String, cookie: String) {
-        val requestData = FormBody.Builder()
-            .add("content", content)
-            .add("resto", resto)
-            .build()
-        val mediaType = "text/html;charset=utf-8".toMediaType()
+    fun replyThread(content: String, resto: String, cookie: String, img: Uri? = null,context: Context) {
+        val multipartBuilder = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("content", content)
+            .addFormDataPart("resto", resto)
+
+        img?.let { uri ->
+            val inputStream = context.contentResolver.openInputStream(uri)
+            val fileName = "image_${System.currentTimeMillis()}.jpg"
+            val bytes = inputStream?.readBytes() ?: byteArrayOf()
+            val requestBody = bytes.toRequestBody("image/*".toMediaTypeOrNull(), 0, bytes.size)
+            multipartBuilder.addFormDataPart("image", fileName, requestBody)
+        }
+
+        val requestBody = multipartBuilder.build()
+
         val request = Request.Builder()
-            .addHeader("Cookie", "userhash=${cookie}")
+            .addHeader("Cookie", "userhash=$cookie")
             .url(Url.Reply_Thread_URL)
-            .post(requestData)
+            .post(requestBody)
             .build()
+
         val call = client.newCall(request)
         call.execute()
     }
