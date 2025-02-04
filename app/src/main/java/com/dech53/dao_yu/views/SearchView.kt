@@ -11,12 +11,12 @@ import androidx.compose.ui.Modifier
 import com.dech53.dao_yu.ui.theme.Dao_yuTheme
 
 @Composable
-fun SearchView(padding: PaddingValues) {
+fun FavView(padding: PaddingValues) {
     Dao_yuTheme {
         Box(modifier = Modifier
             .padding(padding)
             .fillMaxSize()) {
-            Text("搜索", modifier = Modifier.align(Alignment.Center))
+            Text("收藏", modifier = Modifier.align(Alignment.Center))
         }
     }
 }

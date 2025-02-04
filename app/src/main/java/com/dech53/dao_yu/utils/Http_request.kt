@@ -13,11 +13,9 @@ import okhttp3.Request
 import com.squareup.moshi.*
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import okhttp3.FormBody
-import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
-import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
@@ -127,7 +125,13 @@ object Http_request {
         call.execute()
     }
 
-    fun replyThread(content: String, resto: String, cookie: String, img: Uri? = null,context: Context) {
+    fun replyThread(
+        content: String,
+        resto: String,
+        cookie: String,
+        img: Uri? = null,
+        context: Context
+    ):String {
         val multipartBuilder = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
             .addFormDataPart("content", content)
@@ -150,6 +154,9 @@ object Http_request {
             .build()
 
         val call = client.newCall(request)
-        call.execute()
+        val response = call.execute()
+        val body = response.body?.string() ?: ""
+        Log.d("html result",body)
+        return if (JudgeHtmlResult.isSuccess(body)) "发送成功" else "发送失败"
     }
 }

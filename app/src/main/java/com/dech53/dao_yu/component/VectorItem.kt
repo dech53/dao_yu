@@ -1,11 +1,11 @@
 package com.dech53.dao_yu.component
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
 
@@ -22,9 +22,9 @@ val MainButtonItems = listOf(
         unselectedIcon = Icons.Outlined.Home,
     ),
     BottomNavigationItem(
-        title = "搜索",
-        selectedIcon = Icons.Filled.Search,
-        unselectedIcon = Icons.Outlined.Search,
+        title = "收藏",
+        selectedIcon = Icons.Filled.Favorite,
+        unselectedIcon = Icons.Outlined.FavoriteBorder,
     ),
     BottomNavigationItem(
         title = "设置",

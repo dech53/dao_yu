@@ -3,6 +3,7 @@ package com.dech53.dao_yu.viewmodels
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateMapOf
@@ -16,6 +17,7 @@ import com.dech53.dao_yu.models.QuoteRef
 import com.dech53.dao_yu.models.Reply
 import com.dech53.dao_yu.models.toReplies
 import com.dech53.dao_yu.utils.Http_request
+import com.dech53.dao_yu.utils.JudgeHtmlResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.toList
@@ -45,16 +47,19 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao) : ViewModel() {
     }
 
     var cookieList = MutableStateFlow<List<Cookie>>(emptyList())
-    fun initCookieList(){
+    fun initCookieList() {
         viewModelScope.launch {
             cookieDao.getAll().collect { cookies ->
                 cookieList.value = cookies
             }
         }
     }
+
     init {
         initCookieList()
     }
+
+    var IsSending = mutableStateOf(false)
 
     var isRefreshing = mutableStateOf(false)
         private set
@@ -157,13 +162,25 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao) : ViewModel() {
         pageId.value = 1
     }
 
-    fun replyThread(content: String, resto: String, cookie: String,img: Uri? = null,context: Context) {
+
+    fun replyThread(
+        content: String,
+        resto: String,
+        cookie: String,
+        img: Uri? = null,
+        context: Context,
+        onSuccess:(Boolean)->Unit
+    ) {
+        IsSending.value = true
         viewModelScope.launch {
-            withContext(Dispatchers.IO) {
+            val result = withContext(Dispatchers.IO){
                 Http_request.replyThread(
-                    content, resto, cookie,img,context
+                    content, resto, cookie, img, context
                 )
             }
+            IsSending.value = false
+            onSuccess(false)
+            Toast.makeText(context, result, Toast.LENGTH_SHORT).show()
         }
     }
 }

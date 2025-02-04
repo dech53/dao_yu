@@ -143,6 +143,11 @@ class ThreadAndReplyView : ComponentActivity() {
         CookieDatabase.getDatabase(applicationContext)
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        Log.d("TRA", "进程销毁")
+    }
+
     @OptIn(ExperimentalFoundationApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -261,6 +266,7 @@ class ThreadAndReplyView : ComponentActivity() {
                         onResult = { uri = it }
                     )
                     if (showBottomSheet) {
+                        val isSending by viewModel.IsSending
                         ModalBottomSheet(
                             onDismissRequest = {
                                 showBottomSheet = false
@@ -269,7 +275,8 @@ class ThreadAndReplyView : ComponentActivity() {
                             windowInsets = WindowInsets(0),
                             modifier = Modifier.heightIn(
                                 max = (configuration.screenHeightDp / 1.5).dp
-                            )
+                            ),
+                            shape = MaterialTheme.shapes.small
                         ) {
                             val focusRequester = remember { FocusRequester() }
                             val keyboardController = LocalSoftwareKeyboardController.current
@@ -300,13 +307,16 @@ class ThreadAndReplyView : ComponentActivity() {
                                     .padding(horizontal = 10.dp)
                                     .imePadding()
                             ) {
-                                Row(modifier = Modifier.height((configuration.screenHeightDp / 8).dp)) {
+                                Row(
+                                    modifier = Modifier
+                                        .height((configuration.screenHeightDp / 8).dp)
+                                        .fillMaxWidth()
+                                ) {
                                     Box(
                                         modifier = Modifier
-                                            .nestedScroll(
-                                                rememberNestedScrollInteropConnection()
-                                            )
+                                            .nestedScroll(rememberNestedScrollInteropConnection())
                                             .fillMaxHeight()
+                                            .weight(1f)
                                     ) {
                                         OutlinedTextField(
                                             value = viewModel.textFieldValue.value,
@@ -327,7 +337,10 @@ class ThreadAndReplyView : ComponentActivity() {
                                     AsyncImage(
                                         model = uri,
                                         contentDescription = "picked photo",
-                                        modifier = Modifier.size(248.dp)
+                                        modifier = Modifier
+                                            .size(248.dp)
+                                            .weight(0.5f),
+                                        placeholder = painterResource(id = R.drawable.baseline_image_24)
                                     )
                                 }
                                 Row(
@@ -344,7 +357,8 @@ class ThreadAndReplyView : ComponentActivity() {
                                             viewModel.hash.value = selectedHash
                                         }
                                     )
-                                    Row {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        //表情图标
                                         IconButton(
                                             onClick = {
                                                 keyboardController?.hide()
@@ -356,7 +370,7 @@ class ThreadAndReplyView : ComponentActivity() {
                                                 tint = MaterialTheme.colorScheme.primary
                                             )
                                         }
-                                        // 图标2
+                                        //图片picker
                                         IconButton(
                                             onClick = {
                                                 singlePhotoPicker.launch(
@@ -370,23 +384,37 @@ class ThreadAndReplyView : ComponentActivity() {
                                                 tint = MaterialTheme.colorScheme.primary
                                             )
                                         }
-                                        // 图标3
-                                        IconButton(
-                                            onClick = {
-                                                viewModel.replyThread(
-                                                    content = viewModel.textFieldValue.value.text,
-                                                    resto = threadId!!,
-                                                    cookie = viewModel.hash.value,
-                                                    img = uri,
-                                                    context = context
+                                        //发送图标
+                                        if (!isSending) {
+                                            IconButton(
+                                                onClick = {
+                                                    viewModel.replyThread(
+                                                        content = viewModel.textFieldValue.value.text,
+                                                        resto = threadId!!,
+                                                        cookie = viewModel.hash.value,
+                                                        img = uri,
+                                                        context = context,
+                                                        onSuccess = { bool ->
+                                                            showBottomSheet = bool
+                                                        }
+                                                    )
+                                                },
+                                            ) {
+                                                Icon(
+                                                    imageVector = ImageVector.vectorResource(R.drawable.round_send_24),
+                                                    contentDescription = "发送",
+                                                    tint = MaterialTheme.colorScheme.primary
                                                 )
-                                            },
-                                        ) {
-                                            Icon(
-                                                imageVector = ImageVector.vectorResource(R.drawable.round_send_24),
-                                                contentDescription = "发送",
-                                                tint = MaterialTheme.colorScheme.primary
-                                            )
+                                            }
+                                        } else {
+                                            Box(
+                                                modifier = Modifier.padding(start = 15.dp)
+                                            ) {
+                                                CircularProgressIndicator(
+                                                    modifier = Modifier.size(24.dp),
+                                                    color = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
                                         }
                                     }
                                 }
