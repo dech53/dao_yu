@@ -3,7 +3,10 @@ package com.dech53.dao_yu.component
 import android.os.Build.VERSION.SDK_INT
 import android.util.Log
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -11,8 +14,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -29,6 +38,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
@@ -41,11 +51,13 @@ import com.dech53.dao_yu.R
 import com.dech53.dao_yu.static.Url
 import com.dech53.dao_yu.viewmodels.ThreadInfoView_ViewModel
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun Forum_card(
     thread: Thread,
     imgClickAction: () -> Unit,
     cardClickAction: () -> Unit,
+    cardLongClickAction: () -> Unit,
     stricted: Boolean,
     posterName: String?
 ) {
@@ -66,88 +78,114 @@ fun Forum_card(
             }
             .build()
     }
-    Surface(
-        shape = MaterialTheme.shapes.medium,
-        border = BorderStroke(width = 1.dp, color = MaterialTheme.colorScheme.primary),
-        shadowElevation = 2.dp,
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+    Card(
+        shape = MaterialTheme.shapes.small,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ),
         modifier = Modifier
             .padding(horizontal = 13.dp, vertical = 8.dp)
             .fillMaxWidth()
-            .clickable {
-                cardClickAction()
-            }
+            .combinedClickable(
+                onClick = { cardClickAction() },
+                onLongClick = { cardLongClickAction() }
+            )
     ) {
-        Column(modifier = Modifier.padding(5.dp)) {
+        Column(modifier = Modifier.padding(12.dp)) {
             Row(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Row {
-                    //format date like "2025-01-16(四)23:25:03" using regex and replace the "-"
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     if (!stricted && (posterName == thread.name)) {
-                        Text("Poster", fontWeight = FontWeight.W500, fontSize = 11.sp)
+                        Text(
+                            text = "Poster",
+                            fontWeight = FontWeight.W500,
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
                     }
-                    Text(text = date_, fontWeight = FontWeight.W500, fontSize = 11.sp)
-                    Spacer(modifier = Modifier.padding(3.dp))
-                    //user name hash code
-                    Text(text = thread.user_hash, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = date_,
+                        fontWeight = FontWeight.W500,
+                        fontSize = 11.sp,
+                        letterSpacing = 0.5.sp
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = thread.user_hash,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
                 }
+
                 Row(
-                    horizontalArrangement = Arrangement.Absolute.Center,
+                    horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (stricted) {
                         Icon(
                             imageVector = ImageVector.vectorResource(id = R.drawable.baseline_message_24),
                             contentDescription = "messageIcon",
-                            modifier = Modifier.size(15.dp)
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.primary
                         )
+                        Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = thread.ReplyCount.toString(),
                             fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp,
+                            fontSize = 13.sp
                         )
                     } else {
                         Text(
                             text = "No.${thread.id}",
                             fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp,
+                            fontSize = 13.sp
                         )
                     }
-
                 }
             }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             if (thread.title != "无标题") {
-                Text(text = thread.title, color = MaterialTheme.colorScheme.primary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    text = thread.title,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
-            //make the html code show in the card component
+
+            Spacer(modifier = Modifier.height(6.dp))
+
             CommonHtmlText(
                 htmlContent = thread.content,
                 maxLines = if (stricted) 6 else Int.MAX_VALUE
             )
 
-            if (thread.img != "") {
-                //TODO Add click action on img
+            if (thread.img!="") {
+                Spacer(modifier = Modifier.height(10.dp))
                 AsyncImage(
                     imageLoader = imageLoader,
                     model = Url.IMG_THUMB_QA + thread.img + thread.ext,
                     contentDescription = "img from usr ${thread.user_hash}",
                     modifier = Modifier
+                        .width(100.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
                         .clickable(
-                            indication = null,
-                            interactionSource = interactionSource
-                        ) {
-                            //zoom in the photo
-                            imgClickAction()
-                        }
-                        .clip(shape = MaterialTheme.shapes.small),
-                    //placeholder mean phtoto is not completely loaded
-                    placeholder = painterResource(id = R.drawable.apple_touch_icon)
+                            indication = rememberRipple(bounded = true),
+                            interactionSource = remember { MutableInteractionSource() }
+                        ) { imgClickAction() },
+                    placeholder = painterResource(id = R.drawable.apple_touch_icon),
+                    contentScale = ContentScale.Crop
                 )
-                if (activePhotoUrl != null) {
-
-                }
             }
         }
     }

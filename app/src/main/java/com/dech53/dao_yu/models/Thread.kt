@@ -1,5 +1,8 @@
 package com.dech53.dao_yu.models
 
+import androidx.compose.runtime.Stable
+
+@Stable
 data class Thread(
     val id: Int,
     val fid: Int,

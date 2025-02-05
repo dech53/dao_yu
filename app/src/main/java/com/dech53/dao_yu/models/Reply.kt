@@ -1,7 +1,9 @@
 package com.dech53.dao_yu.models
 
-import kotlinx.coroutines.flow.MutableStateFlow
+import androidx.compose.runtime.Stable
 
+
+@Stable
 data class Reply(
     val id: Int,
     val fid: Int?,

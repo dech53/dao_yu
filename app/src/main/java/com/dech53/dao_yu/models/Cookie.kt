@@ -11,3 +11,8 @@ data class Cookie(
     @ColumnInfo val cookie: String,
     @ColumnInfo(name = "usr_hash") val name: String
 )
+
+fun emptyCookie() = Cookie(
+    cookie = "",
+    name = "暂无饼干"
+)

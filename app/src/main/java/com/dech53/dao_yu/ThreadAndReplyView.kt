@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.util.Log
 import android.view.ViewTreeObserver
 import android.widget.Space
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -50,10 +51,13 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -388,16 +392,24 @@ class ThreadAndReplyView : ComponentActivity() {
                                         if (!isSending) {
                                             IconButton(
                                                 onClick = {
-                                                    viewModel.replyThread(
-                                                        content = viewModel.textFieldValue.value.text,
-                                                        resto = threadId!!,
-                                                        cookie = viewModel.hash.value,
-                                                        img = uri,
-                                                        context = context,
-                                                        onSuccess = { bool ->
-                                                            showBottomSheet = bool
-                                                        }
-                                                    )
+                                                    if (!viewModel.textFieldValue.value.text.isEmpty() && !viewModel.hash.value.isEmpty()) {
+                                                        viewModel.replyThread(
+                                                            content = viewModel.textFieldValue.value.text,
+                                                            resto = threadId!!,
+                                                            cookie = viewModel.hash.value,
+                                                            img = uri,
+                                                            context = context,
+                                                            onSuccess = { bool ->
+                                                                showBottomSheet = bool
+                                                            }
+                                                        )
+                                                    } else {
+                                                        Toast.makeText(
+                                                            context,
+                                                            "存在空字段",
+                                                            Toast.LENGTH_SHORT
+                                                        ).show()
+                                                    }
                                                 },
                                             ) {
                                                 Icon(
@@ -552,32 +564,27 @@ class ThreadAndReplyView : ComponentActivity() {
                                                     .build()
                                             }
                                             if (reply.id != 9999999) {
-                                                Surface(
+                                                Card(
                                                     shape = MaterialTheme.shapes.small,
-                                                    color = MaterialTheme.colorScheme.surfaceContainerLow,
-                                                    shadowElevation = 2.dp,
-                                                    border = BorderStroke(
-                                                        width = 1.dp,
-                                                        color = MaterialTheme.colorScheme.primary
+                                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+                                                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
+                                                    colors = CardDefaults.cardColors(
+                                                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                                        contentColor = MaterialTheme.colorScheme.onSurface
                                                     ),
                                                     modifier = Modifier
-                                                        .padding(
-                                                            horizontal = 13.dp,
-                                                            vertical = 8.dp
-                                                        )
+                                                        .padding(horizontal = 13.dp, vertical = 8.dp)
                                                         .fillMaxWidth()
                                                         .combinedClickable(
-                                                            onClick = {},
+                                                            onClick = {
+                                                            },
                                                             onLongClick = {
-                                                                Log.d(
-                                                                    "TR卡片长按",
-                                                                    "触发${reply.id}"
-                                                                )
+                                                                Log.d("TR卡片长按", "触发${reply.id}")
                                                                 viewModel.appendToTextField(">>No.${reply.id}")
                                                             }
                                                         )
                                                 ) {
-                                                    Column(modifier = Modifier.padding(5.dp)) {
+                                                    Column(modifier = Modifier.padding(12.dp)) {
                                                         Row(
                                                             horizontalArrangement = Arrangement.SpaceBetween,
                                                             modifier = Modifier.fillMaxWidth()
@@ -608,7 +615,8 @@ class ThreadAndReplyView : ComponentActivity() {
                                                                 Text(
                                                                     text = reply.user_hash,
                                                                     fontWeight = FontWeight.Bold,
-                                                                    fontSize = 11.sp
+                                                                    fontSize = 11.sp,
+                                                                    color = MaterialTheme.colorScheme.tertiary
                                                                 )
                                                             }
                                                             Text(
@@ -655,10 +663,46 @@ class ThreadAndReplyView : ComponentActivity() {
                                                                             intent
                                                                         )
                                                                     }
-                                                                    .clip(MaterialTheme.shapes.small),
+                                                                    .clip(RoundedCornerShape(4.dp)),
                                                                 placeholder = painterResource(id = R.drawable.apple_touch_icon)
                                                             )
                                                         }
+                                                    }
+                                                }
+                                            }else{
+                                                Card(
+                                                    shape = MaterialTheme.shapes.small,
+                                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+                                                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
+                                                    colors = CardDefaults.cardColors(
+                                                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                                        contentColor = MaterialTheme.colorScheme.onSurface
+                                                    ),
+                                                    modifier = Modifier
+                                                        .padding(horizontal = 13.dp, vertical = 8.dp)
+                                                        .fillMaxWidth()
+                                                ){
+                                                    Column(modifier = Modifier.padding(5.dp)) {
+                                                        Row(
+                                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                                            modifier = Modifier.fillMaxWidth()
+                                                        ) {
+                                                            Row {
+                                                                Text(
+                                                                    text = reply.user_hash,
+                                                                    fontWeight = FontWeight.Bold,
+                                                                    fontSize = 17.sp,
+                                                                    color = MaterialTheme.colorScheme.primary
+                                                                )
+                                                            }
+                                                        }
+                                                        HtmlTRText(
+                                                            htmlContent = reply.content,
+                                                            maxLines = Int.MAX_VALUE,
+                                                            viewModel = viewModel,
+                                                            context = context,
+                                                            posterName = poster
+                                                        )
                                                     }
                                                 }
                                             }

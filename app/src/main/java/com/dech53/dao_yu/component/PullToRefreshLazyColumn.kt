@@ -2,17 +2,16 @@
 
 package com.dech53.dao_yu.component
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.pulltorefresh.PullToRefreshContainer
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
@@ -43,7 +42,7 @@ fun <T> PullToRefreshLazyColumn(
         LazyColumn(
             state = lazyListState,
         ) {
-            itemsIndexed(items) { index, item ->
+            itemsIndexed(items=items) { index, item ->
                 content(item)
                 LaunchedEffect(lazyListState.layoutInfo.totalItemsCount) {
                     if (index == lazyListState.layoutInfo.totalItemsCount - 1) {

@@ -24,7 +24,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,7 +33,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import coil3.ImageLoader
@@ -74,7 +72,6 @@ fun ImageViewer(img_Location: String = "", onFinish: () -> Unit) {
     val context = LocalContext.current
     var isLoading by remember { mutableStateOf(false) }
     var loadSuccess by remember { mutableStateOf(false) }
-
     val imageLoader = remember{ImageLoader.Builder(context)
         .components {
             if (SDK_INT >= 28) {

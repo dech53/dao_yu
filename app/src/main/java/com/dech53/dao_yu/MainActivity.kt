@@ -3,6 +3,8 @@ package com.dech53.dao_yu
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.view.SurfaceView
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -61,11 +63,15 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.room.Room
 import com.dech53.dao_yu.component.ForumCategoryDialog
 import com.dech53.dao_yu.component.MainButtonItems
 import com.dech53.dao_yu.component.PullToRefreshLazyColumn
 import com.dech53.dao_yu.dao.CookieDatabase
+import com.dech53.dao_yu.dao.FavoriteDao
+import com.dech53.dao_yu.dao.FavoriteDataBase
 import com.dech53.dao_yu.models.Cookie
+import com.dech53.dao_yu.models.Favorite
 import com.dech53.dao_yu.static.forumCategories
 import com.dech53.dao_yu.viewmodels.MainPage_ViewModel
 import com.dech53.dao_yu.views.FavView
@@ -73,35 +79,39 @@ import com.dech53.dao_yu.views.SettingsView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
     private val scope = CoroutineScope(Dispatchers.IO)
+    val favDbDao by lazy {
+        FavoriteDataBase.getDatabase(applicationContext).favoriteDao()
+    }
+    private val cookieDb by lazy {
+        CookieDatabase.getDatabase(applicationContext)
+    }
     private val viewModel by viewModels<MainPage_ViewModel>(
         factoryProducer = {
             object : ViewModelProvider.Factory {
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return MainPage_ViewModel(db.cookieDao) as T
+                    return MainPage_ViewModel(cookieDb.cookieDao) as T
                 }
             }
         }
     )
-    private val db by lazy {
-        CookieDatabase.getDatabase(applicationContext)
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             Dao_yuTheme {
-                Main_Screen(viewModel, viewModel.cookie.value)
+                Main_Screen(viewModel, viewModel.cookie.value, favDbDao)
             }
         }
     }
 
     override fun onResume() {
         super.onResume()
-        scope.launch {
+        scope.launch(Dispatchers.IO) {
             viewModel.initHash()
         }
     }
@@ -109,7 +119,12 @@ class MainActivity : ComponentActivity() {
 
 
 @Composable
-fun Main_Page(padding: PaddingValues, viewModel: MainPage_ViewModel, cookie: Cookie?) {
+fun Main_Page(
+    padding: PaddingValues,
+    viewModel: MainPage_ViewModel,
+    cookie: Cookie?,
+    favDao: FavoriteDao
+) {
     val dataState by viewModel.dataState
     val isRefreshing by remember { viewModel.isRefreshing }
     val interactionSource = remember { MutableInteractionSource() }
@@ -117,6 +132,7 @@ fun Main_Page(padding: PaddingValues, viewModel: MainPage_ViewModel, cookie: Coo
     val context = LocalContext.current
     val onError by remember { viewModel.onError }
 
+    val scope = rememberCoroutineScope()
     if (onError) {
         Box(
             modifier = Modifier
@@ -171,9 +187,23 @@ fun Main_Page(padding: PaddingValues, viewModel: MainPage_ViewModel, cookie: Coo
                     }, cardClickAction = {
                         val intent = Intent(context, ThreadAndReplyView::class.java)
                         intent.putExtra("threadId", item.id.toString())
-                        intent.putExtra("hash", cookie?.cookie?:"")
-                        intent.putExtra("name", cookie?.name?:"")
+                        intent.putExtra("hash", cookie?.cookie ?: "")
                         context.startActivity(intent)
+                    }, cardLongClickAction = {
+                        scope.launch {
+                            withContext(Dispatchers.IO) {
+                                favDao.insert(
+                                    Favorite(
+                                        item.id.toString(),
+                                        item.content,
+                                        img = item.img + item.ext
+                                    )
+                                )
+                            }
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(context, "收藏成功", Toast.LENGTH_SHORT)
+                            }
+                        }
                     }, stricted = true, posterName = "")
                 },
                 isRefreshing = isRefreshing,
@@ -195,7 +225,7 @@ fun Main_Page(padding: PaddingValues, viewModel: MainPage_ViewModel, cookie: Coo
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Main_Screen(viewModel: MainPage_ViewModel, cookie:Cookie?) {
+fun Main_Screen(viewModel: MainPage_ViewModel, cookie: Cookie?, favDao: FavoriteDao) {
     var threadContent by remember { viewModel.threadContent }
     //change bottom Icon
     var selectedItemIndex by rememberSaveable { mutableIntStateOf(0) }
@@ -204,7 +234,9 @@ fun Main_Screen(viewModel: MainPage_ViewModel, cookie:Cookie?) {
 
     val title by remember { viewModel.title }
     LaunchedEffect(Unit) {
-        viewModel.loadData()
+        withContext(Dispatchers.IO) {
+            viewModel.loadData()
+        }
     }
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -237,7 +269,7 @@ fun Main_Screen(viewModel: MainPage_ViewModel, cookie:Cookie?) {
                         forumCategory = forumCategories,
                         viewModel = viewModel,
                         changeDrawerState = {
-                            scope.launch {
+                            scope.launch(Dispatchers.IO) {
                                 drawerState.close()
                             }
                         }
@@ -273,7 +305,7 @@ fun Main_Screen(viewModel: MainPage_ViewModel, cookie:Cookie?) {
                     navigationIcon = {
                         IconButton(onClick = {
                             //TODO change the request forum id
-                            scope.launch {
+                            scope.launch(Dispatchers.IO) {
                                 drawerState.apply {
                                     if (isClosed) open() else close()
                                 }
@@ -374,7 +406,7 @@ fun Main_Screen(viewModel: MainPage_ViewModel, cookie:Cookie?) {
                                 viewModel.postThread(
                                     content = threadContent,
                                     fid = "117",
-                                    cookie = cookie?.cookie?:""
+                                    cookie = cookie?.cookie ?: ""
                                 )
                             }
                         ) {
@@ -389,11 +421,12 @@ fun Main_Screen(viewModel: MainPage_ViewModel, cookie:Cookie?) {
                     Main_Page(
                         padding = innerPadding,
                         viewModel = viewModel,
-                        cookie = cookie
+                        cookie = cookie,
+                        favDao = favDao
                     )
                 }
                 composable("设置") { SettingsView(padding = innerPadding) }
-                composable("收藏") { FavView(padding = innerPadding) }
+                composable("收藏") { FavView(padding = innerPadding, favDao,viewModel.cookie.value?.cookie ?: "") }
             }
         }
     }

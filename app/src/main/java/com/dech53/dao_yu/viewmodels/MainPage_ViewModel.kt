@@ -1,23 +1,16 @@
 package com.dech53.dao_yu.viewmodels
 
-import android.content.Context
 import android.util.Log
-import androidx.activity.viewModels
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.room.Room
 import com.dech53.dao_yu.dao.CookieDao
-import com.dech53.dao_yu.dao.CookieDatabase
 import com.dech53.dao_yu.utils.Http_request
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.dech53.dao_yu.models.*
-import kotlinx.coroutines.flow.MutableStateFlow
 
 class MainPage_ViewModel(private val cookieDao: CookieDao) : ViewModel() {
     private val _dataState = mutableStateOf<List<Thread>?>(null)
@@ -56,8 +49,11 @@ class MainPage_ViewModel(private val cookieDao: CookieDao) : ViewModel() {
 
     var cookie = mutableStateOf<Cookie?>(null)
     fun initHash() {
-        viewModelScope.launch {
-            cookie.value = cookieDao.getHashToVerify()
+        viewModelScope.launch(Dispatchers.IO) {
+            val hash = cookieDao.getHashToVerify()
+            withContext(Dispatchers.Main) {
+                cookie.value = hash
+            }
         }
     }
 
@@ -77,7 +73,9 @@ class MainPage_ViewModel(private val cookieDao: CookieDao) : ViewModel() {
                             cookie.value?.cookie ?: ""
                         )
                     }
-                    _dataState.value = data
+                    withContext(Dispatchers.Main) {
+                        _dataState.value = data
+                    }
                 }
             } catch (e: Exception) {
                 onError.value = true
@@ -102,7 +100,9 @@ class MainPage_ViewModel(private val cookieDao: CookieDao) : ViewModel() {
                         cookie.value?.cookie ?: ""
                     )
                 }
-                _dataState.value = newData
+                withContext(Dispatchers.Main) {
+                    _dataState.value = newData
+                }
                 resetPageId()
                 if (showIcon) {
                     isRefreshing.value = false
@@ -143,7 +143,9 @@ class MainPage_ViewModel(private val cookieDao: CookieDao) : ViewModel() {
                     cookie.value?.cookie ?: ""
                 )
             }
-            _dataState.value = (_dataState.value.orEmpty() + newData!!)
+            withContext(Dispatchers.Main) {
+                _dataState.value = (_dataState.value.orEmpty() + newData!!)
+            }
         }
     }
 

@@ -81,7 +81,6 @@ fun HtmlTRText(
         }
         result
     }
-    var scope = rememberCoroutineScope()
     //second regex match
     Column(modifier = Modifier.animateContentSize()) {
         parts.forEach { (isMatch, text) ->
@@ -134,10 +133,10 @@ fun HtmlTRText(
                     ) {
                         Text(
                             text = ">>No.${id}",
-                            color = Color(0xFF789922),
+                            color = MaterialTheme.colorScheme.primary,
                             fontSize = 14.sp,
                             style = MaterialTheme.typography.labelSmall.copy(
-                                color = Color(0xFF789922),
+                                color = MaterialTheme.colorScheme.primary,
                                 background = MaterialTheme.colorScheme.surfaceContainerLow
                             ),
                         )
@@ -145,7 +144,7 @@ fun HtmlTRText(
                         CircularProgressIndicator(
                             modifier = Modifier.size(16.dp),
                             strokeWidth = 2.dp,
-                            color = Color(0xFF789922)
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
@@ -156,7 +155,7 @@ fun HtmlTRText(
                         linkStyles = TextLinkStyles(
                             style = SpanStyle(
                                 textDecoration = TextDecoration.Underline,
-                                color = Color(0xFF789922)
+                                color = MaterialTheme.colorScheme.primary
                             )
                         )
                     ),

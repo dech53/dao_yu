@@ -16,13 +16,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dech53.dao_yu.models.Cookie
+import com.dech53.dao_yu.models.emptyCookie
 
 //后续还要改，直接用textfield太几把丑了
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomExposedDropMenu(itemList: List<Cookie>, onSelect: (String) -> Unit) {
     var dropMenuExpanded by remember { mutableStateOf(false) }
-    var selected by remember { mutableStateOf(itemList[0]) }
+    var selected by remember { mutableStateOf(if (itemList.isNotEmpty()) itemList[0] else emptyCookie()) }
     ExposedDropdownMenuBox(
         expanded = dropMenuExpanded,
         onExpandedChange = { dropMenuExpanded = !dropMenuExpanded }

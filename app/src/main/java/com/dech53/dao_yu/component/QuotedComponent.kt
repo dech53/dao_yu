@@ -5,14 +5,19 @@ import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -20,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -47,7 +53,7 @@ fun QuotedComponent(
                 modifier = Modifier
                     .border(
                         width = 1.dp,
-                        color = Color(0xFF789922),
+                        color = MaterialTheme.colorScheme.primary,
                         shape = MaterialTheme.shapes.extraSmall
                     )
                     .padding(all = 5.dp)
@@ -55,9 +61,9 @@ fun QuotedComponent(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(top = 5.dp)
+                        .padding(top = 2.dp).padding(horizontal = 5.dp)
                 ) {
-                    if (quoteRef.user_hash!="") {
+                    if (quoteRef.user_hash != "") {
                         Row(
                             horizontalArrangement = Arrangement.Start
                         ) {
@@ -76,6 +82,7 @@ fun QuotedComponent(
                             )
                         }
                     }
+                    Spacer(modifier = Modifier.height(2.dp))
                     HtmlTRText(
                         htmlContent = quoteRef.content,
                         viewModel = viewModel,
@@ -85,20 +92,31 @@ fun QuotedComponent(
                     AsyncImage(
                         model = Url.IMG_THUMB_QA + quoteRef.img + quoteRef.ext,
                         contentDescription = "",
-                        modifier = Modifier.clickable {
-                            val intent = Intent(context, ImageViewer::class.java)
-                            intent.putExtra("imgName", quoteRef.img + quoteRef.ext)
-                            context.startActivity(intent)
-                        }
+                        modifier = Modifier
+                            .width(100.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .border(
+                                1.dp,
+                                MaterialTheme.colorScheme.outline,
+                                RoundedCornerShape(8.dp)
+                            )
+                            .clickable(
+                                indication = rememberRipple(bounded = true),
+                                interactionSource = remember { MutableInteractionSource() }
+                            ) {
+                                val intent = Intent(context, ImageViewer::class.java)
+                                intent.putExtra("imgName", quoteRef.img + quoteRef.ext)
+                                context.startActivity(intent)
+                            }
                     )
                 }
             }
             //floating id
             Text(
                 text = ">>No." + quoteRef.id.toString(),
-                color = Color(0xFF789922),
+                color = MaterialTheme.colorScheme.primary,
                 style = MaterialTheme.typography.labelSmall.copy(
-                    color = Color(0xFF789922),
+                    color = MaterialTheme.colorScheme.primary,
                     background = MaterialTheme.colorScheme.surfaceContainerLow
                 ),
                 fontSize = 14.sp,
@@ -115,7 +133,7 @@ fun QuotedComponent(
             text = ">>No." + quoteRef.id.toString(),
             fontSize = 14.sp,
             style = MaterialTheme.typography.labelSmall.copy(
-                color = Color(0xFF789922),
+                color = MaterialTheme.colorScheme.primary,
                 background = MaterialTheme.colorScheme.surfaceContainerLow
             ),
             modifier = Modifier.clickable {
