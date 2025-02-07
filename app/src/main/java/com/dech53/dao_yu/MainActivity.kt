@@ -189,21 +189,26 @@ fun Main_Page(
                         intent.putExtra("threadId", item.id.toString())
                         intent.putExtra("hash", cookie?.cookie ?: "")
                         context.startActivity(intent)
-                    }, cardLongClickAction = {
-                        scope.launch {
-                            withContext(Dispatchers.IO) {
-                                favDao.insert(
-                                    Favorite(
-                                        item.id.toString(),
-                                        item.content,
-                                        img = item.img + item.ext
-                                    )
-                                )
+                    }, cardLongClickAction = {//下拉菜单选项判断操作
+                            when(it) {
+                                "收藏"-> (scope.launch {
+                                    withContext(Dispatchers.IO) {
+                                        favDao.insert(
+                                            Favorite(
+                                                item.id.toString(),
+                                                item.content,
+                                                img = item.img + item.ext
+                                            )
+                                        )
+                                    }
+                                    withContext(Dispatchers.Main){
+                                        Log.d("Main_Page", "收藏成功 Toast 显示")
+                                        Toast.makeText(context,"收藏成功",Toast.LENGTH_SHORT).show()
+                                    }
+                                })
+                                "屏蔽饼干"-> (Toast.makeText(context,"屏蔽饼干",Toast.LENGTH_SHORT).show())
+                                "订阅"-> (Toast.makeText(context,"订阅",Toast.LENGTH_SHORT).show())
                             }
-                            withContext(Dispatchers.Main) {
-                                Toast.makeText(context, "收藏成功", Toast.LENGTH_SHORT)
-                            }
-                        }
                     }, stricted = true, posterName = "")
                 },
                 isRefreshing = isRefreshing,
@@ -426,7 +431,13 @@ fun Main_Screen(viewModel: MainPage_ViewModel, cookie: Cookie?, favDao: Favorite
                     )
                 }
                 composable("设置") { SettingsView(padding = innerPadding) }
-                composable("收藏") { FavView(padding = innerPadding, favDao,viewModel.cookie.value?.cookie ?: "") }
+                composable("收藏") {
+                    FavView(
+                        padding = innerPadding,
+                        favDao,
+                        viewModel.cookie.value?.cookie ?: ""
+                    )
+                }
             }
         }
     }

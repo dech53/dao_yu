@@ -7,6 +7,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -22,6 +24,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -35,13 +39,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dech53.dao_yu.models.Thread
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusModifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.unit.DpOffset
 import androidx.core.text.HtmlCompat
 import coil3.ImageLoader
 import coil3.compose.AsyncImage
@@ -49,6 +59,7 @@ import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import com.dech53.dao_yu.R
 import com.dech53.dao_yu.static.Url
+import com.dech53.dao_yu.static.dropDownItemsList
 import com.dech53.dao_yu.viewmodels.ThreadInfoView_ViewModel
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -57,7 +68,7 @@ fun Forum_card(
     thread: Thread,
     imgClickAction: () -> Unit,
     cardClickAction: () -> Unit,
-    cardLongClickAction: () -> Unit,
+    cardLongClickAction: (String) -> Unit,
     stricted: Boolean,
     posterName: String?
 ) {
@@ -66,6 +77,10 @@ fun Forum_card(
     var date_ = replace_.replace(dateRegex.find(thread.now)!!.value, "/")
     var activePhotoUrl by remember { mutableStateOf<String?>(null) }
     val interactionSource = remember { MutableInteractionSource() }
+    var isContextVisible by rememberSaveable { mutableStateOf(false) }
+    var pressOffset by remember { mutableStateOf(DpOffset.Zero) }
+    var itemHeight by remember { mutableStateOf(0.dp) }
+    var itemWidth by remember { mutableStateOf(0.dp) }
     val context = LocalContext.current
     val imageLoader = remember {
         ImageLoader.Builder(context)
@@ -78,6 +93,7 @@ fun Forum_card(
             }
             .build()
     }
+    val density = LocalDensity.current
     Card(
         shape = MaterialTheme.shapes.small,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
@@ -89,10 +105,18 @@ fun Forum_card(
         modifier = Modifier
             .padding(horizontal = 13.dp, vertical = 8.dp)
             .fillMaxWidth()
-            .combinedClickable(
-                onClick = { cardClickAction() },
-                onLongClick = { cardLongClickAction() }
-            )
+            .pointerInput(true) {
+                detectTapGestures(
+                    onTap = {
+                        cardClickAction()
+                    },
+                    onLongPress = {
+                        itemWidth = it.x.toDp()
+                        itemHeight = it.y.toDp()
+                        isContextVisible = true
+                    }
+                )
+            }
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(
@@ -169,7 +193,7 @@ fun Forum_card(
                 maxLines = if (stricted) 6 else Int.MAX_VALUE
             )
 
-            if (thread.img!="") {
+            if (thread.img != "") {
                 Spacer(modifier = Modifier.height(10.dp))
                 AsyncImage(
                     imageLoader = imageLoader,
@@ -185,6 +209,24 @@ fun Forum_card(
                         ) { imgClickAction() },
                     placeholder = painterResource(id = R.drawable.apple_touch_icon),
                     contentScale = ContentScale.Crop
+                )
+            }
+        }
+        DropdownMenu(
+            expanded = isContextVisible,
+            onDismissRequest = { isContextVisible = false },
+            offset = pressOffset.copy(
+                x = itemWidth,
+                y = pressOffset.y - itemHeight,
+            )
+        ) {
+            dropDownItemsList.forEach { item ->
+                DropdownMenuItem(
+                    text = { Text(item) },
+                    onClick = {
+                        cardLongClickAction(item)
+                        isContextVisible = false
+                    }
                 )
             }
         }
