@@ -75,8 +75,6 @@ fun Forum_card(
     var dateRegex = Regex(pattern = "[^\\(]*|(?<=\\))[^\\)]*")
     var replace_ = Regex(pattern = "-")
     var date_ = replace_.replace(dateRegex.find(thread.now)!!.value, "/")
-    var activePhotoUrl by remember { mutableStateOf<String?>(null) }
-    val interactionSource = remember { MutableInteractionSource() }
     var isContextVisible by rememberSaveable { mutableStateOf(false) }
     var pressOffset by remember { mutableStateOf(DpOffset.Zero) }
     var itemHeight by remember { mutableStateOf(0.dp) }
@@ -93,7 +91,6 @@ fun Forum_card(
             }
             .build()
     }
-    val density = LocalDensity.current
     Card(
         shape = MaterialTheme.shapes.small,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
@@ -106,8 +103,10 @@ fun Forum_card(
             .padding(horizontal = 13.dp, vertical = 8.dp)
             .fillMaxWidth()
             .pointerInput(true) {
+                val currentItem = thread
                 detectTapGestures(
                     onTap = {
+//                        Log.d("内部单点id和content","${currentItem.id}+${currentItem.content}")
                         cardClickAction()
                     },
                     onLongPress = {

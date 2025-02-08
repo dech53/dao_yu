@@ -1,18 +1,27 @@
 package com.dech53.dao_yu.viewmodels
 
 import android.util.Log
+import android.widget.Toast
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.dech53.dao_yu.dao.CookieDao
+import com.dech53.dao_yu.dao.FavoriteDao
 import com.dech53.dao_yu.utils.Http_request
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.dech53.dao_yu.models.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 
-class MainPage_ViewModel(private val cookieDao: CookieDao) : ViewModel() {
+class MainPage_ViewModel(private val cookieDao: CookieDao, private val favDao: FavoriteDao) :
+    ViewModel() {
     private val _dataState = mutableStateOf<List<Thread>?>(null)
     val dataState: State<List<Thread>?> = _dataState
 
@@ -29,8 +38,32 @@ class MainPage_ViewModel(private val cookieDao: CookieDao) : ViewModel() {
     var forumId = mutableStateOf("53")
 
     var title = mutableStateOf("婆罗门一")
-        private set
 
+    fun insertFav(fav: Favorite) {
+        viewModelScope.launch {
+            favDao.insert(fav)
+        }
+    }
+
+    fun hasId(id: Int): Boolean {
+        return favData.value.any { it.id == id.toString() }
+    }
+
+    var favData = MutableStateFlow(emptyList<Favorite>())
+
+    fun getAllFav() {
+        viewModelScope.launch {
+            favDao.getAll().collect { favs ->
+                favData.value = favs
+            }
+        }
+    }
+
+    fun deleteFav(fav: Favorite) {
+        viewModelScope.launch {
+            favDao.delete(fav)
+        }
+    }
 
     var threadContent = mutableStateOf("")
 
@@ -59,6 +92,7 @@ class MainPage_ViewModel(private val cookieDao: CookieDao) : ViewModel() {
 
     init {
         initHash()
+        getAllFav()
     }
 
     // initial request
@@ -74,7 +108,9 @@ class MainPage_ViewModel(private val cookieDao: CookieDao) : ViewModel() {
                         )
                     }
                     withContext(Dispatchers.Main) {
+                        isInitialLoad.value = false
                         _dataState.value = data
+
                     }
                 }
             } catch (e: Exception) {
@@ -86,21 +122,27 @@ class MainPage_ViewModel(private val cookieDao: CookieDao) : ViewModel() {
         }
     }
 
+    var isInitialLoad = mutableStateOf(true)
+
     // refresh data
-    fun refreshData(showIcon: Boolean) {
+    fun refreshData(showIcon: Boolean, lazyListState: LazyListState?) {
         viewModelScope.launch {
             try {
                 if (showIcon) {
                     isRefreshing.value = true
                 }
                 onError.value = false
+                delay(100)
+                _dataState.value = null
                 val newData = withContext(Dispatchers.IO) {
                     Http_request.get<Thread>(
                         if (!isThread.value) "showf?id=${forumId.value}" else "timeline?id=${forumId.value}",
                         cookie.value?.cookie ?: ""
                     )
                 }
+
                 withContext(Dispatchers.Main) {
+                    isInitialLoad.value = false
                     _dataState.value = newData
                 }
                 resetPageId()
@@ -119,7 +161,7 @@ class MainPage_ViewModel(private val cookieDao: CookieDao) : ViewModel() {
         else isThread.value = false
         if (forumId.value != id) {
             forumId.value = id
-            refreshData(showIcon)
+            refreshData(showIcon, null)
         }
     }
 
@@ -144,6 +186,7 @@ class MainPage_ViewModel(private val cookieDao: CookieDao) : ViewModel() {
                 )
             }
             withContext(Dispatchers.Main) {
+                isInitialLoad.value = true
                 _dataState.value = (_dataState.value.orEmpty() + newData!!)
             }
         }

@@ -2,6 +2,7 @@ package com.dech53.dao_yu.views
 
 import android.content.Intent
 import android.util.Log
+import androidx.activity.viewModels
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -43,16 +44,29 @@ import com.dech53.dao_yu.ui.theme.Dao_yuTheme
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntOffset
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import com.dech53.dao_yu.component.ActionIcon
+import com.dech53.dao_yu.viewmodels.MainPage_ViewModel
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 @Composable
-fun FavView(padding: PaddingValues, favDao: FavoriteDao, hash: String) {
-    val data = favDao.getAll().collectAsStateWithLifecycle(initialValue = emptyList())
+fun FavView(padding: PaddingValues, hash: String, viewModel: MainPage_ViewModel) {
+    val data = viewModel.favData.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     Dao_yuTheme {
@@ -67,8 +81,10 @@ fun FavView(padding: PaddingValues, favDao: FavoriteDao, hash: String) {
                     modifier = Modifier.align(Alignment.Center)
                 )
             } else {
-                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    data.value.forEach { item ->
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    items(data.value, key = { item ->
+                        item.id
+                    }) { item ->
                         var contextMenuWidth by remember {
                             mutableFloatStateOf(0f)
                         }
@@ -81,8 +97,7 @@ fun FavView(padding: PaddingValues, favDao: FavoriteDao, hash: String) {
                                 .height(IntrinsicSize.Min)
                                 .padding(8.dp),
                             contentAlignment = Alignment.CenterStart,
-
-                            ) {
+                        ) {
                             Row(
                                 modifier = Modifier
                                     .onSizeChanged {
@@ -91,12 +106,44 @@ fun FavView(padding: PaddingValues, favDao: FavoriteDao, hash: String) {
                                     },
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text("AAA")
-                                Text("BBB")
-                                Text("CCC")
-                                Text("DDD")
-                                Text("EEE")
-                                Text("FFF")
+                                ActionIcon(
+                                    onClick = {
+                                        scope.launch {
+                                            offset.animateTo(0f)
+                                        }
+                                        val sendIntent: Intent = Intent().apply {
+                                            action = Intent.ACTION_SEND
+                                            putExtra(
+                                                Intent.EXTRA_TEXT,
+                                                Url.Thread_Main_URL + item.id
+                                            )
+                                            flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                            type = "text/plain"
+                                        }
+                                        val shareIntent = Intent.createChooser(sendIntent, null)
+                                        context.startActivity(shareIntent)
+                                    },
+                                    backgroundColor = Color.Blue,
+                                    icon = Icons.Default.Share,
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .clip(CircleShape),
+                                    contentDescription = "分享"
+                                )
+                                ActionIcon(
+                                    onClick = {
+                                        scope.launch {
+                                            offset.animateTo(0f)
+                                            viewModel.deleteFav(item)
+                                        }
+                                    },
+                                    backgroundColor = Color.Red,
+                                    icon = Icons.Default.Delete,
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .clip(CircleShape),
+                                    contentDescription = "删除"
+                                )
                             }
                             Card(
                                 modifier = Modifier
@@ -118,13 +165,12 @@ fun FavView(padding: PaddingValues, favDao: FavoriteDao, hash: String) {
                                                     offset.value >= contextMenuWidth / 2f -> {
                                                         scope.launch {
                                                             offset.animateTo(contextMenuWidth)
-
                                                         }
                                                     }
+
                                                     else -> {
                                                         scope.launch {
                                                             offset.animateTo(0f)
-
                                                         }
                                                     }
                                                 }
@@ -142,6 +188,7 @@ fun FavView(padding: PaddingValues, favDao: FavoriteDao, hash: String) {
                                     val intent = Intent(context, ThreadAndReplyView::class.java)
                                     intent.putExtra("threadId", item.id.toString())
                                     intent.putExtra("hash", hash)
+                                    intent.putExtra("hasId", true)
                                     context.startActivity(intent)
                                 }
                             ) {

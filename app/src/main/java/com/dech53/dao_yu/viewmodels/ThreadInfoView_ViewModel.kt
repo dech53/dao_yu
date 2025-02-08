@@ -12,7 +12,9 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dech53.dao_yu.dao.CookieDao
+import com.dech53.dao_yu.dao.FavoriteDao
 import com.dech53.dao_yu.models.Cookie
+import com.dech53.dao_yu.models.Favorite
 import com.dech53.dao_yu.models.QuoteRef
 import com.dech53.dao_yu.models.Reply
 import com.dech53.dao_yu.models.toReplies
@@ -26,9 +28,23 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
-class ThreadInfoView_ViewModel(private val cookieDao: CookieDao) : ViewModel() {
+class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val favDao: FavoriteDao) : ViewModel() {
     private val _threadInfo = mutableStateOf<List<Reply>?>(null)
     var threadInfo: State<List<Reply>?> = _threadInfo
+
+    fun deleteFav(fav: Favorite) {
+        viewModelScope.launch {
+            favDao.delete(fav)
+        }
+    }
+
+    fun addFave(fav: Favorite) {
+        viewModelScope.launch {
+            favDao.insert(fav)
+        }
+    }
+
+    var isFaved = mutableStateOf(false)
 
     var pageId = mutableStateOf(1)
         private set

@@ -9,7 +9,7 @@ import com.dech53.dao_yu.models.Favorite
 
 @Database(entities = [Favorite::class], version = 1, exportSchema = false)
 abstract class FavoriteDataBase : RoomDatabase() {
-    abstract fun favoriteDao(): FavoriteDao
+    abstract val favoriteDao: FavoriteDao
 
 
     companion object {

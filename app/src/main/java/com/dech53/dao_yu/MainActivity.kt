@@ -3,13 +3,19 @@ package com.dech53.dao_yu
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
-import android.view.SurfaceView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -60,6 +66,7 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -78,13 +85,14 @@ import com.dech53.dao_yu.views.FavView
 import com.dech53.dao_yu.views.SettingsView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
     private val scope = CoroutineScope(Dispatchers.IO)
     val favDbDao by lazy {
-        FavoriteDataBase.getDatabase(applicationContext).favoriteDao()
+        FavoriteDataBase.getDatabase(applicationContext)
     }
     private val cookieDb by lazy {
         CookieDatabase.getDatabase(applicationContext)
@@ -93,7 +101,7 @@ class MainActivity : ComponentActivity() {
         factoryProducer = {
             object : ViewModelProvider.Factory {
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return MainPage_ViewModel(cookieDb.cookieDao) as T
+                    return MainPage_ViewModel(cookieDb.cookieDao, favDbDao.favoriteDao) as T
                 }
             }
         }
@@ -104,7 +112,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             Dao_yuTheme {
-                Main_Screen(viewModel, viewModel.cookie.value, favDbDao)
+                Main_Screen(viewModel, viewModel.cookie.value)
             }
         }
     }
@@ -123,7 +131,6 @@ fun Main_Page(
     padding: PaddingValues,
     viewModel: MainPage_ViewModel,
     cookie: Cookie?,
-    favDao: FavoriteDao
 ) {
     val dataState by viewModel.dataState
     val isRefreshing by remember { viewModel.isRefreshing }
@@ -131,8 +138,13 @@ fun Main_Page(
     val lazyListState = rememberLazyListState()
     val context = LocalContext.current
     val onError by remember { viewModel.onError }
-
     val scope = rememberCoroutineScope()
+
+    LaunchedEffect(dataState) {
+        if (!viewModel.isInitialLoad.value) {
+            lazyListState.animateScrollToItem(0)
+        }
+    }
     if (onError) {
         Box(
             modifier = Modifier
@@ -153,7 +165,7 @@ fun Main_Page(
                     interactionSource = interactionSource,
                     indication = null
                 ) {
-                    viewModel.refreshData(false)
+                    viewModel.refreshData(false, lazyListState)
                 }
             )
         }
@@ -176,51 +188,70 @@ fun Main_Page(
             modifier = Modifier
                 .fillMaxSize()
         ) {
-            PullToRefreshLazyColumn(
-                items = dataState!!,
-                lazyListState = lazyListState,
-                content = { item ->
-                    Forum_card(thread = item, imgClickAction = {
-                        val intent = Intent(context, ImageViewer::class.java)
-                        intent.putExtra("imgName", item.img + item.ext)
-                        context.startActivity(intent)
-                    }, cardClickAction = {
-                        val intent = Intent(context, ThreadAndReplyView::class.java)
-                        intent.putExtra("threadId", item.id.toString())
-                        intent.putExtra("hash", cookie?.cookie ?: "")
-                        context.startActivity(intent)
-                    }, cardLongClickAction = {//下拉菜单选项判断操作
-                            when(it) {
-                                "收藏"-> (scope.launch {
-                                    withContext(Dispatchers.IO) {
-                                        favDao.insert(
-                                            Favorite(
-                                                item.id.toString(),
-                                                item.content,
-                                                img = item.img + item.ext
-                                            )
-                                        )
-                                    }
-                                    withContext(Dispatchers.Main){
-                                        Log.d("Main_Page", "收藏成功 Toast 显示")
-                                        Toast.makeText(context,"收藏成功",Toast.LENGTH_SHORT).show()
-                                    }
-                                })
-                                "屏蔽饼干"-> (Toast.makeText(context,"屏蔽饼干",Toast.LENGTH_SHORT).show())
-                                "订阅"-> (Toast.makeText(context,"订阅",Toast.LENGTH_SHORT).show())
-                            }
-                    }, stricted = true, posterName = "")
-                },
-                isRefreshing = isRefreshing,
-                //refreshing method
-                onRefresh = {
-                    viewModel.refreshData(true)
-                },
-                contentPadding = padding,
-                loadMore = {
-                    viewModel.loadMore()
+            var visible = remember { mutableStateOf(false) }
+            val scope = rememberCoroutineScope()
+            LaunchedEffect(Unit) {
+                scope.launch {
+                    delay(100)
+                    visible.value = true
                 }
-            )
+            }
+            AnimatedVisibility(
+                visible = visible.value,
+                enter = fadeIn() + slideInHorizontally(),
+                exit = fadeOut() + slideOutHorizontally()
+            ) {
+                PullToRefreshLazyColumn(
+                    items = dataState!!,
+                    lazyListState = lazyListState,
+                    content = { item ->
+                        Forum_card(thread = item, imgClickAction = {
+                            val intent = Intent(context, ImageViewer::class.java)
+                            intent.putExtra("imgName", item.img + item.ext)
+                            context.startActivity(intent)
+                        }, cardClickAction = {
+                            Log.d("外部单点", "${item}")
+                            val intent = Intent(context, ThreadAndReplyView::class.java)
+                            intent.putExtra("threadId", item.id.toString())
+                            intent.putExtra("hash", cookie?.cookie ?: "")
+                            if (viewModel.hasId(item.id)) {
+                                intent.putExtra("hasId", true)
+                            }
+                            context.startActivity(intent)
+                        }, cardLongClickAction = {//下拉菜单选项判断操作
+                            Log.d("菜单点击", "${item}")
+                            when (it) {
+                                "收藏" -> (viewModel.insertFav(
+                                    Favorite(
+                                        item.id.toString(),
+                                        item.content,
+                                        img = item.img + item.ext
+                                    )
+                                ))
+
+                                "屏蔽饼干" -> (Toast.makeText(
+                                    context,
+                                    "屏蔽饼干",
+                                    Toast.LENGTH_SHORT
+                                )
+                                    .show())
+
+                                "订阅" -> (Toast.makeText(context, "订阅", Toast.LENGTH_SHORT)
+                                    .show())
+                            }
+                        }, stricted = true, posterName = "")
+                    },
+                    isRefreshing = isRefreshing,
+                    //refreshing method
+                    onRefresh = {
+                        viewModel.refreshData(true, lazyListState)
+                    },
+                    contentPadding = padding,
+                    loadMore = {
+                        viewModel.loadMore()
+                    }
+                )
+            }
 //            if (viewModel.isChangeForumIdDialogVisible.value) {
 //                ForumCategoryDialog(forumCategory = forumCategories, viewModel = viewModel)
 //            }
@@ -230,7 +261,7 @@ fun Main_Page(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Main_Screen(viewModel: MainPage_ViewModel, cookie: Cookie?, favDao: FavoriteDao) {
+fun Main_Screen(viewModel: MainPage_ViewModel, cookie: Cookie?) {
     var threadContent by remember { viewModel.threadContent }
     //change bottom Icon
     var selectedItemIndex by rememberSaveable { mutableIntStateOf(0) }
@@ -286,16 +317,18 @@ fun Main_Screen(viewModel: MainPage_ViewModel, cookie: Cookie?, favDao: Favorite
     ) {
         Scaffold(
             floatingActionButton = {
-                FloatingActionButton(
-                    onClick = {
-                        showBottomSheet = !showBottomSheet
-                        Log.d("悬浮按钮点击", "触发")
-                    },
-                ) {
-                    Icon(
-                        imageVector = ImageVector.vectorResource(id = R.drawable.baseline_create_24),
-                        contentDescription = "Back",
-                    )
+                if ((title != "收藏") && (title != "设置")) {
+                    FloatingActionButton(
+                        onClick = {
+                            showBottomSheet = !showBottomSheet
+                            Log.d("悬浮按钮点击", "触发")
+                        },
+                    ) {
+                        Icon(
+                            imageVector = ImageVector.vectorResource(id = R.drawable.baseline_create_24),
+                            contentDescription = "Back",
+                        )
+                    }
                 }
             },
             topBar = {
@@ -308,18 +341,20 @@ fun Main_Screen(viewModel: MainPage_ViewModel, cookie: Cookie?, favDao: Favorite
                         titleContentColor = MaterialTheme.colorScheme.primary,
                     ),
                     navigationIcon = {
-                        IconButton(onClick = {
-                            //TODO change the request forum id
-                            scope.launch(Dispatchers.IO) {
-                                drawerState.apply {
-                                    if (isClosed) open() else close()
+                        if ((title != "收藏") && (title != "设置")) {
+                            IconButton(onClick = {
+                                //TODO change the request forum id
+                                scope.launch(Dispatchers.IO) {
+                                    drawerState.apply {
+                                        if (isClosed) open() else close()
+                                    }
                                 }
+                            }) {
+                                Icon(
+                                    imageVector = ImageVector.vectorResource(id = R.drawable.baseline_sync_alt_24),
+                                    contentDescription = "Back",
+                                )
                             }
-                        }) {
-                            Icon(
-                                imageVector = ImageVector.vectorResource(id = R.drawable.baseline_sync_alt_24),
-                                contentDescription = "Back",
-                            )
                         }
                     }
                 )
@@ -427,15 +462,14 @@ fun Main_Screen(viewModel: MainPage_ViewModel, cookie: Cookie?, favDao: Favorite
                         padding = innerPadding,
                         viewModel = viewModel,
                         cookie = cookie,
-                        favDao = favDao
                     )
                 }
                 composable("设置") { SettingsView(padding = innerPadding) }
                 composable("收藏") {
                     FavView(
                         padding = innerPadding,
-                        favDao,
-                        viewModel.cookie.value?.cookie ?: ""
+                        viewModel.cookie.value?.cookie ?: "",
+                        viewModel = viewModel
                     )
                 }
             }
