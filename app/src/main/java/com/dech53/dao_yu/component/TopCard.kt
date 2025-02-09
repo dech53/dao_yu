@@ -43,6 +43,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.focusModifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -70,6 +71,7 @@ fun Forum_card(
     cardClickAction: () -> Unit,
     cardLongClickAction: (String) -> Unit,
     stricted: Boolean,
+    modifier: Modifier,
     posterName: String?
 ) {
     var dateRegex = Regex(pattern = "[^\\(]*|(?<=\\))[^\\)]*")
@@ -99,14 +101,12 @@ fun Forum_card(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
             contentColor = MaterialTheme.colorScheme.onSurface
         ),
-        modifier = Modifier
+        modifier = modifier
             .padding(horizontal = 13.dp, vertical = 8.dp)
             .fillMaxWidth()
             .pointerInput(true) {
-                val currentItem = thread
                 detectTapGestures(
                     onTap = {
-//                        Log.d("内部单点id和content","${currentItem.id}+${currentItem.content}")
                         cardClickAction()
                     },
                     onLongPress = {
@@ -173,8 +173,17 @@ fun Forum_card(
                     }
                 }
             }
+            if (thread.sage == 1){
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "SAGE",
+                    color = Color.Red,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold
+                    )
+            }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             if (thread.title != "无标题") {
                 Text(
@@ -183,9 +192,19 @@ fun Forum_card(
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
                 )
+                Spacer(modifier = Modifier.height(6.dp))
+            }
+            if (thread.name != "无名氏") {
+                Text(
+                    text = thread.name,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(6.dp))
             }
 
-            Spacer(modifier = Modifier.height(6.dp))
+
 
             CommonHtmlText(
                 htmlContent = thread.content,

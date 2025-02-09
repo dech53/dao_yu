@@ -132,15 +132,12 @@ class MainPage_ViewModel(private val cookieDao: CookieDao, private val favDao: F
                     isRefreshing.value = true
                 }
                 onError.value = false
-                delay(100)
-                _dataState.value = null
                 val newData = withContext(Dispatchers.IO) {
                     Http_request.get<Thread>(
                         if (!isThread.value) "showf?id=${forumId.value}" else "timeline?id=${forumId.value}",
                         cookie.value?.cookie ?: ""
                     )
                 }
-
                 withContext(Dispatchers.Main) {
                     isInitialLoad.value = false
                     _dataState.value = newData

@@ -138,7 +138,6 @@ fun Main_Page(
     val lazyListState = rememberLazyListState()
     val context = LocalContext.current
     val onError by remember { viewModel.onError }
-    val scope = rememberCoroutineScope()
 
     LaunchedEffect(dataState) {
         if (!viewModel.isInitialLoad.value) {
@@ -204,7 +203,7 @@ fun Main_Page(
                 PullToRefreshLazyColumn(
                     items = dataState!!,
                     lazyListState = lazyListState,
-                    content = { item ->
+                    content = { item,modifier ->
                         Forum_card(thread = item, imgClickAction = {
                             val intent = Intent(context, ImageViewer::class.java)
                             intent.putExtra("imgName", item.img + item.ext)
@@ -239,7 +238,7 @@ fun Main_Page(
                                 "订阅" -> (Toast.makeText(context, "订阅", Toast.LENGTH_SHORT)
                                     .show())
                             }
-                        }, stricted = true, posterName = "")
+                        }, stricted = true, posterName = "", modifier = modifier)
                     },
                     isRefreshing = isRefreshing,
                     //refreshing method

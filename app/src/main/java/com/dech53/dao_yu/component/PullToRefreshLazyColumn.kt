@@ -37,7 +37,7 @@ import kotlinx.coroutines.launch
 fun PullToRefreshLazyColumn(
     items: List<Thread>,
     lazyListState: LazyListState = rememberLazyListState(),
-    content: @Composable (Thread) -> Unit,
+    content: @Composable (Thread, Modifier) -> Unit,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     contentPadding: PaddingValues,
@@ -53,11 +53,11 @@ fun PullToRefreshLazyColumn(
     ) {
         LazyColumn(
             state = lazyListState,
-            modifier = Modifier.animateContentSize(
-            )
         ) {
-            itemsIndexed(items = items, key = { _, item -> item.id }) { index, item ->
-                content(item)
+            itemsIndexed(
+                items = items,
+                key = { index, item -> "${item.id}" }) { index, item ->
+                content(item, Modifier.animateItem())
                 LaunchedEffect(lazyListState.layoutInfo.totalItemsCount) {
                     if (index == lazyListState.layoutInfo.totalItemsCount - 1) {
                         loadMore()

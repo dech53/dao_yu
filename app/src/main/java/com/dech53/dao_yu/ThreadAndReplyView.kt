@@ -279,6 +279,15 @@ class ThreadAndReplyView : ComponentActivity() {
                         contract = ActivityResultContracts.PickVisualMedia(),
                         onResult = { uri = it }
                     )
+                    var textFieldModifier = Modifier.fillMaxSize()
+                    LaunchedEffect(uri) {
+                        if (uri != null) {
+                            textFieldModifier = Modifier.fillMaxHeight()
+                        } else {
+                            textFieldModifier = Modifier.fillMaxSize()
+                        }
+                    }
+
                     if (showBottomSheet) {
                         val isSending by viewModel.IsSending
                         ModalBottomSheet(
@@ -334,9 +343,8 @@ class ThreadAndReplyView : ComponentActivity() {
                                     ) {
                                         OutlinedTextField(
                                             value = viewModel.textFieldValue.value,
-                                            modifier = Modifier
-                                                .focusRequester(focusRequester = focusRequester)
-                                                .fillMaxHeight(),
+                                            modifier = textFieldModifier
+                                                .focusRequester(focusRequester = focusRequester),
                                             onValueChange = {
                                                 viewModel.updateTextFieldValue(it)
                                             },
@@ -348,14 +356,16 @@ class ThreadAndReplyView : ComponentActivity() {
                                             }
                                         )
                                     }
-                                    AsyncImage(
-                                        model = uri,
-                                        contentDescription = "picked photo",
-                                        modifier = Modifier
-                                            .size(248.dp)
-                                            .weight(0.5f),
-                                        placeholder = painterResource(id = R.drawable.baseline_image_24)
-                                    )
+                                    if (uri != null) {
+                                        AsyncImage(
+                                            model = uri,
+                                            contentDescription = "picked photo",
+                                            modifier = Modifier
+                                                .size(248.dp)
+                                                .weight(0.5f),
+                                            placeholder = painterResource(id = R.drawable.baseline_image_24)
+                                        )
+                                    }
                                 }
                                 Row(
                                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -541,225 +551,228 @@ class ThreadAndReplyView : ComponentActivity() {
 //                                )
                                 val poster = threadInfo!![0].user_hash
                                 val pullToRefreshState = rememberPullToRefreshState()
-                                var visible = remember { mutableStateOf(false) }
-                                val scope = rememberCoroutineScope()
-                                LaunchedEffect(Unit) {
-                                    scope.launch {
-                                        delay(100)
-                                        visible.value = true
-                                    }
-                                }
-                                AnimatedVisibility(
-                                    visible = visible.value,
-                                    enter = fadeIn() + slideInHorizontally(),
-                                    exit = fadeOut() + slideOutHorizontally()
-                                ) {
-                                    Box(
-                                        contentAlignment = Alignment.TopCenter,
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .nestedScroll(pullToRefreshState.nestedScrollConnection)
 
+                                Box(
+                                    contentAlignment = Alignment.TopCenter,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .nestedScroll(pullToRefreshState.nestedScrollConnection)
+
+                                ) {
+                                    LazyColumn(
+                                        state = lazyListState,
+                                        modifier = Modifier.fillMaxSize()
                                     ) {
-                                        LazyColumn(
-                                            state = lazyListState,
-                                            modifier = Modifier.fillMaxSize()
-                                        ) {
-                                            itemsIndexed(threadInfo!!) { index, reply ->
-                                                val interactionSource =
-                                                    remember { MutableInteractionSource() }
-                                                val date_ = Regex(pattern = "-").replace(
-                                                    Regex(pattern = "[^\\(]*|(?<=\\))[^\\)]*").find(
-                                                        reply.now
-                                                    )!!.value,
-                                                    "/"
-                                                )
-                                                val context = LocalContext.current
-                                                val imageLoader = remember {
-                                                    ImageLoader.Builder(context)
-                                                        .components {
-                                                            if (SDK_INT >= 28) {
-                                                                add(AnimatedImageDecoder.Factory())
-                                                            } else {
-                                                                add(GifDecoder.Factory())
-                                                            }
+                                        itemsIndexed(threadInfo!!) { index, reply ->
+                                            val interactionSource =
+                                                remember { MutableInteractionSource() }
+                                            val date_ = Regex(pattern = "-").replace(
+                                                Regex(pattern = "[^\\(]*|(?<=\\))[^\\)]*").find(
+                                                    reply.now
+                                                )!!.value,
+                                                "/"
+                                            )
+                                            val context = LocalContext.current
+                                            val imageLoader = remember {
+                                                ImageLoader.Builder(context)
+                                                    .components {
+                                                        if (SDK_INT >= 28) {
+                                                            add(AnimatedImageDecoder.Factory())
+                                                        } else {
+                                                            add(GifDecoder.Factory())
                                                         }
-                                                        .build()
-                                                }
-                                                if (reply.id != 9999999) {
-                                                    Card(
-                                                        shape = MaterialTheme.shapes.small,
-                                                        border = BorderStroke(
-                                                            1.dp,
-                                                            MaterialTheme.colorScheme.primary
-                                                        ),
-                                                        elevation = CardDefaults.elevatedCardElevation(
-                                                            defaultElevation = 4.dp
-                                                        ),
-                                                        colors = CardDefaults.cardColors(
-                                                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                                                            contentColor = MaterialTheme.colorScheme.onSurface
-                                                        ),
-                                                        modifier = Modifier
-                                                            .padding(
-                                                                horizontal = 13.dp,
-                                                                vertical = 8.dp
-                                                            )
-                                                            .fillMaxWidth()
-                                                            .combinedClickable(
-                                                                onClick = {
-                                                                },
-                                                                onLongClick = {
-                                                                    Log.d(
-                                                                        "TR卡片长按",
-                                                                        "触发${reply.id}"
-                                                                    )
-                                                                    viewModel.appendToTextField(">>No.${reply.id}")
-                                                                }
-                                                            )
-                                                    ) {
-                                                        Column(modifier = Modifier.padding(12.dp)) {
-                                                            Row(
-                                                                horizontalArrangement = Arrangement.SpaceBetween,
-                                                                modifier = Modifier.fillMaxWidth()
-                                                            ) {
-                                                                Row {
-                                                                    if ((poster == reply.user_hash))
-                                                                        Text(
-                                                                            "Po",
-                                                                            fontWeight = FontWeight.W500,
-                                                                            fontSize = 11.sp,
-                                                                            color = Color.Red,
-                                                                        )
-                                                                    Spacer(
-                                                                        modifier = Modifier.padding(
-                                                                            3.dp
-                                                                        )
-                                                                    )
+                                                    }
+                                                    .build()
+                                            }
+                                            if (reply.id != 9999999) {
+                                                Card(
+                                                    shape = MaterialTheme.shapes.small,
+                                                    border = BorderStroke(
+                                                        1.dp,
+                                                        MaterialTheme.colorScheme.primary
+                                                    ),
+                                                    elevation = CardDefaults.elevatedCardElevation(
+                                                        defaultElevation = 4.dp
+                                                    ),
+                                                    colors = CardDefaults.cardColors(
+                                                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                                        contentColor = MaterialTheme.colorScheme.onSurface
+                                                    ),
+                                                    modifier = Modifier
+                                                        .padding(
+                                                            horizontal = 13.dp,
+                                                            vertical = 8.dp
+                                                        )
+                                                        .fillMaxWidth()
+                                                        .combinedClickable(
+                                                            onClick = {
+                                                            },
+                                                            onLongClick = {
+                                                                Log.d(
+                                                                    "TR卡片长按",
+                                                                    "触发${reply.id}"
+                                                                )
+                                                                viewModel.appendToTextField(">>No.${reply.id}\n")
+                                                            }
+                                                        )
+                                                ) {
+                                                    Column(modifier = Modifier.padding(12.dp)) {
+                                                        Row(
+                                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                                            modifier = Modifier.fillMaxWidth()
+                                                        ) {
+                                                            Row {
+                                                                if ((poster == reply.user_hash))
                                                                     Text(
-                                                                        text = date_,
+                                                                        "Po",
                                                                         fontWeight = FontWeight.W500,
-                                                                        fontSize = 11.sp
-                                                                    )
-                                                                    Spacer(
-                                                                        modifier = Modifier.padding(
-                                                                            3.dp
-                                                                        )
-                                                                    )
-                                                                    Text(
-                                                                        text = reply.user_hash,
-                                                                        fontWeight = FontWeight.Bold,
                                                                         fontSize = 11.sp,
-                                                                        color = MaterialTheme.colorScheme.tertiary
+                                                                        color = Color.Red,
                                                                     )
-                                                                }
+                                                                Spacer(
+                                                                    modifier = Modifier.padding(
+                                                                        3.dp
+                                                                    )
+                                                                )
                                                                 Text(
-                                                                    text = "No.${reply.id}",
+                                                                    text = date_,
                                                                     fontWeight = FontWeight.W500,
                                                                     fontSize = 11.sp
                                                                 )
-                                                            }
-                                                            if (reply.title != "无标题") {
-                                                                Text(
-                                                                    text = reply.title,
-                                                                    color = MaterialTheme.colorScheme.primary,
-                                                                    fontSize = 18.sp,
-                                                                    fontWeight = FontWeight.Bold
-                                                                )
-                                                            }
-                                                            HtmlTRText(
-                                                                htmlContent = reply.content,
-                                                                maxLines = Int.MAX_VALUE,
-                                                                viewModel = viewModel,
-                                                                context = context,
-                                                                posterName = poster
-                                                            )
-                                                            if (reply.img != "") {
-                                                                AsyncImage(
-                                                                    imageLoader = imageLoader,
-                                                                    model = Url.IMG_THUMB_QA + reply.img + reply.ext,
-                                                                    contentDescription = "img from usr ${reply.user_hash}",
-                                                                    modifier = Modifier
-                                                                        .width(100.dp)
-                                                                        .clip(RoundedCornerShape(4.dp))
-                                                                        .border(
-                                                                            1.dp,
-                                                                            MaterialTheme.colorScheme.outline,
-                                                                            RoundedCornerShape(4.dp)
-                                                                        )
-                                                                        .clickable(
-                                                                            indication = null,
-                                                                            interactionSource = interactionSource
-                                                                        ) {
-                                                                            //zoom in the photo
-                                                                            val intent = Intent(
-                                                                                context,
-                                                                                ImageViewer::class.java
-                                                                            )
-                                                                            intent.putExtra(
-                                                                                "imgName",
-                                                                                reply.img + reply.ext
-                                                                            )
-                                                                            context.startActivity(
-                                                                                intent
-                                                                            )
-                                                                        }
-                                                                        .clip(RoundedCornerShape(4.dp)),
-                                                                    placeholder = painterResource(id = R.drawable.apple_touch_icon)
-                                                                )
-                                                            }
-                                                        }
-                                                    }
-                                                } else {
-                                                    Card(
-                                                        shape = MaterialTheme.shapes.small,
-                                                        border = BorderStroke(
-                                                            1.dp,
-                                                            MaterialTheme.colorScheme.primary
-                                                        ),
-                                                        elevation = CardDefaults.elevatedCardElevation(
-                                                            defaultElevation = 4.dp
-                                                        ),
-                                                        colors = CardDefaults.cardColors(
-                                                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                                                            contentColor = MaterialTheme.colorScheme.onSurface
-                                                        ),
-                                                        modifier = Modifier
-                                                            .padding(
-                                                                horizontal = 13.dp,
-                                                                vertical = 8.dp
-                                                            )
-                                                            .fillMaxWidth()
-                                                    ) {
-                                                        Column(modifier = Modifier.padding(5.dp)) {
-                                                            Row(
-                                                                horizontalArrangement = Arrangement.SpaceBetween,
-                                                                modifier = Modifier.fillMaxWidth()
-                                                            ) {
-                                                                Row {
-                                                                    Text(
-                                                                        text = reply.user_hash,
-                                                                        fontWeight = FontWeight.Bold,
-                                                                        fontSize = 17.sp,
-                                                                        color = MaterialTheme.colorScheme.primary
+                                                                Spacer(
+                                                                    modifier = Modifier.padding(
+                                                                        3.dp
                                                                     )
-                                                                }
+                                                                )
+                                                                Text(
+                                                                    text = reply.user_hash,
+                                                                    fontWeight = FontWeight.Bold,
+                                                                    fontSize = 11.sp,
+                                                                    color = MaterialTheme.colorScheme.tertiary
+                                                                )
                                                             }
-                                                            HtmlTRText(
-                                                                htmlContent = reply.content,
-                                                                maxLines = Int.MAX_VALUE,
-                                                                viewModel = viewModel,
-                                                                context = context,
-                                                                posterName = poster
+                                                            Text(
+                                                                text = "No.${reply.id}",
+                                                                fontWeight = FontWeight.W500,
+                                                                fontSize = 11.sp
+                                                            )
+                                                        }
+                                                        if (reply.sage == 1) {
+                                                            Text(
+                                                                text = "SAGE",
+                                                                color = Color.Red,
+                                                                fontSize = 22.sp,
+                                                                fontWeight = FontWeight.Bold
+                                                            )
+                                                        }
+                                                        if (reply.title != "无标题") {
+                                                            Text(
+                                                                text = reply.title,
+                                                                color = MaterialTheme.colorScheme.primary,
+                                                                fontSize = 18.sp,
+                                                                fontWeight = FontWeight.Bold
+                                                            )
+                                                        }
+                                                        if (reply.name != "无名氏") {
+                                                            Text(
+                                                                text = reply.name,
+                                                                color = MaterialTheme.colorScheme.primary,
+                                                                fontSize = 12.sp,
+                                                                fontWeight = FontWeight.Bold
+                                                            )
+                                                        }
+                                                        HtmlTRText(
+                                                            htmlContent = reply.content,
+                                                            maxLines = Int.MAX_VALUE,
+                                                            viewModel = viewModel,
+                                                            context = context,
+                                                            posterName = poster
+                                                        )
+                                                        if (reply.img != "") {
+                                                            AsyncImage(
+                                                                imageLoader = imageLoader,
+                                                                model = Url.IMG_THUMB_QA + reply.img + reply.ext,
+                                                                contentDescription = "img from usr ${reply.user_hash}",
+                                                                modifier = Modifier
+                                                                    .width(100.dp)
+                                                                    .clip(RoundedCornerShape(4.dp))
+                                                                    .border(
+                                                                        1.dp,
+                                                                        MaterialTheme.colorScheme.outline,
+                                                                        RoundedCornerShape(4.dp)
+                                                                    )
+                                                                    .clickable(
+                                                                        indication = null,
+                                                                        interactionSource = interactionSource
+                                                                    ) {
+                                                                        //zoom in the photo
+                                                                        val intent = Intent(
+                                                                            context,
+                                                                            ImageViewer::class.java
+                                                                        )
+                                                                        intent.putExtra(
+                                                                            "imgName",
+                                                                            reply.img + reply.ext
+                                                                        )
+                                                                        context.startActivity(
+                                                                            intent
+                                                                        )
+                                                                    }
+                                                                    .clip(RoundedCornerShape(4.dp)),
+                                                                placeholder = painterResource(id = R.drawable.apple_touch_icon)
                                                             )
                                                         }
                                                     }
                                                 }
-                                                //load more data when scroll to the bottom
-                                                LaunchedEffect(Unit) {
-                                                    if (index == lazyListState.layoutInfo.totalItemsCount - 1) {
-                                                        viewModel.loadMore()
+                                            } else {
+                                                Card(
+                                                    shape = MaterialTheme.shapes.small,
+                                                    border = BorderStroke(
+                                                        1.dp,
+                                                        MaterialTheme.colorScheme.primary
+                                                    ),
+                                                    elevation = CardDefaults.elevatedCardElevation(
+                                                        defaultElevation = 4.dp
+                                                    ),
+                                                    colors = CardDefaults.cardColors(
+                                                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                                        contentColor = MaterialTheme.colorScheme.onSurface
+                                                    ),
+                                                    modifier = Modifier
+                                                        .padding(
+                                                            horizontal = 13.dp,
+                                                            vertical = 8.dp
+                                                        )
+                                                        .fillMaxWidth()
+                                                ) {
+                                                    Column(modifier = Modifier.padding(5.dp)) {
+                                                        Row(
+                                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                                            modifier = Modifier.fillMaxWidth()
+                                                        ) {
+                                                            Row {
+                                                                Text(
+                                                                    text = reply.user_hash,
+                                                                    fontWeight = FontWeight.Bold,
+                                                                    fontSize = 17.sp,
+                                                                    color = MaterialTheme.colorScheme.primary
+                                                                )
+                                                            }
+                                                        }
+                                                        HtmlTRText(
+                                                            htmlContent = reply.content,
+                                                            maxLines = Int.MAX_VALUE,
+                                                            viewModel = viewModel,
+                                                            context = context,
+                                                            posterName = poster
+                                                        )
                                                     }
+                                                }
+                                            }
+                                            //load more data when scroll to the bottom
+                                            LaunchedEffect(Unit) {
+                                                if (index == lazyListState.layoutInfo.totalItemsCount - 1) {
+                                                    viewModel.loadMore()
                                                 }
                                             }
                                         }
