@@ -28,7 +28,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
-class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val favDao: FavoriteDao) : ViewModel() {
+class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val favDao: FavoriteDao) :
+    ViewModel() {
     private val _threadInfo = mutableStateOf<List<Reply>?>(null)
     var threadInfo: State<List<Reply>?> = _threadInfo
 
@@ -96,7 +97,7 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val fav
         private set
 
     var maxPage = mutableStateOf(0)
-        private set
+
 
     var contentContext = mutableStateMapOf<String, QuoteRef>()
 
@@ -151,27 +152,48 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val fav
         _threadInfo.value = null
     }
 
-    fun loadMore() {
-        if (pageId.value > maxPage.value) canUseRequest.value = false
-        if (canUseRequest.value) {
-            Log.d("thread_page加载第${pageId.value}测试", "触发")
+    fun loadMore(direction: String, skipPage: Int? = null) {
+        if (direction == "F") {
+            if (pageId.value > maxPage.value) canUseRequest.value = false else canUseRequest.value = true
+            if (canUseRequest.value) {
+                Log.d("thread_page加载第${pageId.value}测试", "触发")
+                isIndicatorVisible.value = true
+                viewModelScope.launch {
+                    pageId.value++
+                    val newData = withContext(Dispatchers.IO) {
+                        Http_request.getThreadInfo(
+                            "thread?id=${threadId.value}&page=${pageId.value}",
+                            hash.value
+                        )
+                    }
+                    Log.d("新获取的数据", newData!!.toReplies().drop(1).size.toString())
+                    _threadInfo.value =
+                        (_threadInfo.value.orEmpty() + newData!!.toReplies().drop(1))
+                    isIndicatorVisible.value = false
+                }
+
+            } else {
+                Log.d("thread_page加载第${pageId.value}测试", "未触发")
+            }
+        } else if (direction == "B") {
             isIndicatorVisible.value = true
             viewModelScope.launch {
-                pageId.value++
                 val newData = withContext(Dispatchers.IO) {
                     Http_request.getThreadInfo(
-                        "thread?id=${threadId.value}&page=${pageId.value}",
+                        "thread?id=${threadId.value}&page=${skipPage}",
                         hash.value
                     )
                 }
                 Log.d("新获取的数据", newData!!.toReplies().drop(1).size.toString())
-                _threadInfo.value = (_threadInfo.value.orEmpty() + newData!!.toReplies().drop(1))
+                _threadInfo.value = _threadInfo.value.orEmpty().toMutableList().let { list ->
+                    listOf(list.first()) + newData.toReplies().drop(1)
+                }
+
+                isIndicatorVisible.value = false
             }
-            isIndicatorVisible.value = false
         } else {
             Log.d("thread_page加载第${pageId.value}测试", "未触发")
         }
-
     }
 
     fun resetPageId() {
@@ -185,11 +207,11 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val fav
         cookie: String,
         img: Uri? = null,
         context: Context,
-        onSuccess:(Boolean)->Unit
+        onSuccess: (Boolean) -> Unit
     ) {
         IsSending.value = true
         viewModelScope.launch {
-            val result = withContext(Dispatchers.IO){
+            val result = withContext(Dispatchers.IO) {
                 Http_request.replyThread(
                     content, resto, cookie, img, context
                 )

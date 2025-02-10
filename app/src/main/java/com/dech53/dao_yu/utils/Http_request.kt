@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit
 object Http_request {
     val client = OkHttpClient().newBuilder()
         .cookieJar(CookieJar.NO_COOKIES)
-        .callTimeout(30, TimeUnit.SECONDS)
+        .callTimeout(10, TimeUnit.SECONDS)
         .build()
     val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
 

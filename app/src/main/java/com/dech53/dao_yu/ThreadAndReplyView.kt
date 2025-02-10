@@ -22,6 +22,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -48,6 +49,8 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -61,6 +64,8 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -86,9 +91,14 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.rememberNestedScrollInteropConnection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import coil3.ImageLoader
@@ -97,6 +107,7 @@ import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import com.dech53.dao_yu.component.CustomExposedDropMenu
 import com.dech53.dao_yu.component.HtmlTRText
+import com.dech53.dao_yu.component.TRCard
 import com.dech53.dao_yu.dao.CookieDatabase
 import com.dech53.dao_yu.dao.FavoriteDataBase
 import com.dech53.dao_yu.models.Favorite
@@ -143,6 +154,7 @@ class ThreadAndReplyView : ComponentActivity() {
                 val lazyListState = rememberLazyListState()
                 val context = LocalContext.current
                 val cookies by viewModel.cookieList.collectAsState()
+                var isChangePageVisible = remember { mutableStateOf(false) }
                 Scaffold(
                     topBar = {
                         TopAppBar(
@@ -169,25 +181,6 @@ class ThreadAndReplyView : ComponentActivity() {
                                 }
                             },
                             actions = {
-                                IconButton(onClick = {
-                                    val sendIntent: Intent = Intent().apply {
-                                        action = Intent.ACTION_SEND
-                                        putExtra(
-                                            Intent.EXTRA_TEXT,
-                                            Url.Thread_Main_URL + threadId
-                                        )
-                                        flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
-                                        type = "text/plain"
-                                    }
-                                    val shareIntent = Intent.createChooser(sendIntent, null)
-                                    context.startActivity(shareIntent)
-                                    Log.d("log thread share link", "${threadId}")
-                                }) {
-                                    Icon(
-                                        imageVector = ImageVector.vectorResource(id = R.drawable.outline_share_24),
-                                        contentDescription = "thread share"
-                                    )
-                                }
                                 IconButton(
                                     onClick = {
                                         //选择回复生成分享图片
@@ -232,7 +225,10 @@ class ThreadAndReplyView : ComponentActivity() {
                                         contentDescription = "bottom icon"
                                     )
                                 }
-                                IconButton(onClick = {}) {
+                                IconButton(onClick = {
+                                    //跳转页数
+                                    isChangePageVisible.value = !isChangePageVisible.value
+                                }) {
                                     Icon(
                                         imageVector = ImageVector.vectorResource(R.drawable.baseline_move_down_24),
                                         contentDescription = "bottom icon"
@@ -275,6 +271,8 @@ class ThreadAndReplyView : ComponentActivity() {
                     var uri by remember {
                         mutableStateOf<Uri?>(null)
                     }
+
+
                     val singlePhotoPicker = rememberLauncherForActivityResult(
                         contract = ActivityResultContracts.PickVisualMedia(),
                         onResult = { uri = it }
@@ -481,6 +479,7 @@ class ThreadAndReplyView : ComponentActivity() {
                             }
                         }
                     }
+
                     Box(
                         contentAlignment = Alignment.TopCenter,
                         modifier = Modifier
@@ -585,145 +584,15 @@ class ThreadAndReplyView : ComponentActivity() {
                                                     .build()
                                             }
                                             if (reply.id != 9999999) {
-                                                Card(
-                                                    shape = MaterialTheme.shapes.small,
-                                                    border = BorderStroke(
-                                                        1.dp,
-                                                        MaterialTheme.colorScheme.primary
-                                                    ),
-                                                    elevation = CardDefaults.elevatedCardElevation(
-                                                        defaultElevation = 4.dp
-                                                    ),
-                                                    colors = CardDefaults.cardColors(
-                                                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                                                        contentColor = MaterialTheme.colorScheme.onSurface
-                                                    ),
-                                                    modifier = Modifier
-                                                        .padding(
-                                                            horizontal = 13.dp,
-                                                            vertical = 8.dp
-                                                        )
-                                                        .fillMaxWidth()
-                                                        .combinedClickable(
-                                                            onClick = {
-                                                            },
-                                                            onLongClick = {
-                                                                Log.d(
-                                                                    "TR卡片长按",
-                                                                    "触发${reply.id}"
-                                                                )
-                                                                viewModel.appendToTextField(">>No.${reply.id}\n")
-                                                            }
-                                                        )
-                                                ) {
-                                                    Column(modifier = Modifier.padding(12.dp)) {
-                                                        Row(
-                                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                                            modifier = Modifier.fillMaxWidth()
-                                                        ) {
-                                                            Row {
-                                                                if ((poster == reply.user_hash))
-                                                                    Text(
-                                                                        "Po",
-                                                                        fontWeight = FontWeight.W500,
-                                                                        fontSize = 11.sp,
-                                                                        color = Color.Red,
-                                                                    )
-                                                                Spacer(
-                                                                    modifier = Modifier.padding(
-                                                                        3.dp
-                                                                    )
-                                                                )
-                                                                Text(
-                                                                    text = date_,
-                                                                    fontWeight = FontWeight.W500,
-                                                                    fontSize = 11.sp
-                                                                )
-                                                                Spacer(
-                                                                    modifier = Modifier.padding(
-                                                                        3.dp
-                                                                    )
-                                                                )
-                                                                Text(
-                                                                    text = reply.user_hash,
-                                                                    fontWeight = FontWeight.Bold,
-                                                                    fontSize = 11.sp,
-                                                                    color = MaterialTheme.colorScheme.tertiary
-                                                                )
-                                                            }
-                                                            Text(
-                                                                text = "No.${reply.id}",
-                                                                fontWeight = FontWeight.W500,
-                                                                fontSize = 11.sp
-                                                            )
-                                                        }
-                                                        if (reply.sage == 1) {
-                                                            Text(
-                                                                text = "SAGE",
-                                                                color = Color.Red,
-                                                                fontSize = 22.sp,
-                                                                fontWeight = FontWeight.Bold
-                                                            )
-                                                        }
-                                                        if (reply.title != "无标题") {
-                                                            Text(
-                                                                text = reply.title,
-                                                                color = MaterialTheme.colorScheme.primary,
-                                                                fontSize = 18.sp,
-                                                                fontWeight = FontWeight.Bold
-                                                            )
-                                                        }
-                                                        if (reply.name != "无名氏") {
-                                                            Text(
-                                                                text = reply.name,
-                                                                color = MaterialTheme.colorScheme.primary,
-                                                                fontSize = 12.sp,
-                                                                fontWeight = FontWeight.Bold
-                                                            )
-                                                        }
-                                                        HtmlTRText(
-                                                            htmlContent = reply.content,
-                                                            maxLines = Int.MAX_VALUE,
-                                                            viewModel = viewModel,
-                                                            context = context,
-                                                            posterName = poster
-                                                        )
-                                                        if (reply.img != "") {
-                                                            AsyncImage(
-                                                                imageLoader = imageLoader,
-                                                                model = Url.IMG_THUMB_QA + reply.img + reply.ext,
-                                                                contentDescription = "img from usr ${reply.user_hash}",
-                                                                modifier = Modifier
-                                                                    .width(100.dp)
-                                                                    .clip(RoundedCornerShape(4.dp))
-                                                                    .border(
-                                                                        1.dp,
-                                                                        MaterialTheme.colorScheme.outline,
-                                                                        RoundedCornerShape(4.dp)
-                                                                    )
-                                                                    .clickable(
-                                                                        indication = null,
-                                                                        interactionSource = interactionSource
-                                                                    ) {
-                                                                        //zoom in the photo
-                                                                        val intent = Intent(
-                                                                            context,
-                                                                            ImageViewer::class.java
-                                                                        )
-                                                                        intent.putExtra(
-                                                                            "imgName",
-                                                                            reply.img + reply.ext
-                                                                        )
-                                                                        context.startActivity(
-                                                                            intent
-                                                                        )
-                                                                    }
-                                                                    .clip(RoundedCornerShape(4.dp)),
-                                                                placeholder = painterResource(id = R.drawable.apple_touch_icon)
-                                                            )
-                                                        }
-                                                    }
-                                                }
+                                                TRCard(
+                                                    posterName = poster,
+                                                    item = reply,
+                                                    lazyListState = lazyListState,
+                                                    loadMore = {
+                                                        viewModel.loadMore("F")
+                                                    },
+                                                    viewModel
+                                                )
                                             } else {
                                                 Card(
                                                     shape = MaterialTheme.shapes.small,
@@ -772,7 +641,7 @@ class ThreadAndReplyView : ComponentActivity() {
                                             //load more data when scroll to the bottom
                                             LaunchedEffect(Unit) {
                                                 if (index == lazyListState.layoutInfo.totalItemsCount - 1) {
-                                                    viewModel.loadMore()
+                                                    viewModel.loadMore("F")
                                                 }
                                             }
                                         }
@@ -780,6 +649,68 @@ class ThreadAndReplyView : ComponentActivity() {
                                 }
                             }
                         }
+                    }
+                    val page = remember { mutableStateOf(1) }
+                    if (isChangePageVisible.value) {
+                        //切换页数
+                        Dialog(onDismissRequest = {
+                            isChangePageVisible.value = !isChangePageVisible.value
+                        }) {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(80.dp)
+                                    .width(400.dp),
+                                shape = RoundedCornerShape(16.dp),
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(horizontal = 16.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    IconButton(onClick = {
+                                        page.value =
+                                            (page.value - 1).coerceAtLeast(1)
+                                    }) {
+                                        Icon(
+                                            imageVector = ImageVector.vectorResource(id = R.drawable.baseline_arrow_back_ios_new_24),
+                                            contentDescription = "Previous Page"
+                                        )
+                                    }
+
+                                    OutlinedTextField(
+                                        value = page.value.toString(),
+                                        onValueChange = {
+                                            val newPage = it
+                                            if (newPage != "" && newPage > "0") {
+                                                page.value = newPage.toInt()
+                                            }
+                                        },
+                                        modifier = Modifier.width(100.dp),
+                                        textStyle = TextStyle(fontSize = 16.sp, textAlign = TextAlign.Center),
+                                        keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                                        keyboardActions = KeyboardActions(onDone = {
+                                            viewModel.pageId.value = page.value
+                                            viewModel.loadMore("B",page.value)
+                                            isChangePageVisible.value = !isChangePageVisible.value
+                                        })
+                                    )
+
+                                    IconButton(onClick = {
+                                        if (page.value <= viewModel.maxPage.value)
+                                            page.value += 1
+                                    }) {
+                                        Icon(
+                                            imageVector = ImageVector.vectorResource(id = R.drawable.baseline_arrow_forward_ios_24),
+                                            contentDescription = "Next Page"
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
                     }
                 }
             }

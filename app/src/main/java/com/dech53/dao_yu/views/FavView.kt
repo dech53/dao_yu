@@ -114,7 +114,7 @@ fun FavView(padding: PaddingValues, hash: String, viewModel: MainPage_ViewModel)
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(IntrinsicSize.Min)
-                                    .padding(8.dp),
+                                    .padding(8.dp).animateItem(),
                                 contentAlignment = Alignment.CenterStart,
                             ) {
                                 Row(
