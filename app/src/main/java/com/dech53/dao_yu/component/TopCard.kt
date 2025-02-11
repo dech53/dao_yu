@@ -8,9 +8,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -52,8 +54,8 @@ import coil3.gif.GifDecoder
 import com.dech53.dao_yu.R
 import com.dech53.dao_yu.static.Url
 import com.dech53.dao_yu.static.dropDownItemsList
+import com.dech53.dao_yu.static.forumMap
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun Forum_card(
     thread: Thread,
@@ -61,8 +63,11 @@ fun Forum_card(
     cardClickAction: () -> Unit,
     cardLongClickAction: (String) -> Unit,
     stricted: Boolean,
-    modifier: Modifier,
-    posterName: String?
+    posterName: String?,
+    mainForumId: String,
+    forumId: String,
+    forumIdClickAction: () -> Unit,
+    forumCategoryId:String
 ) {
     var dateRegex = Regex(pattern = "[^\\(]*|(?<=\\))[^\\)]*")
     var replace_ = Regex(pattern = "-")
@@ -91,7 +96,7 @@ fun Forum_card(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
             contentColor = MaterialTheme.colorScheme.onSurface
         ),
-        modifier = modifier
+        modifier = Modifier
             .padding(horizontal = 13.dp, vertical = 8.dp)
             .fillMaxWidth()
             .pointerInput(true) {
@@ -163,14 +168,14 @@ fun Forum_card(
                     }
                 }
             }
-            if (thread.sage == 1){
+            if (thread.sage == 1) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "SAGE",
                     color = Color.Red,
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold
-                    )
+                )
             }
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -217,6 +222,28 @@ fun Forum_card(
                     placeholder = painterResource(id = R.drawable.apple_touch_icon),
                     contentScale = ContentScale.Crop
                 )
+            }
+            if ((mainForumId in listOf("1", "2", "3")) && forumCategoryId == "999") {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .width(100.dp)
+                        .fillMaxSize()
+                        .padding(top = 8.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .clickable {
+                            forumIdClickAction()
+                        }
+                ) {
+                    Text(
+                        text = forumMap[forumId] ?: "未知版号",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         }
         DropdownMenu(

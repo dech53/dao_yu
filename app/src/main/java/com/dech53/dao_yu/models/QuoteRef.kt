@@ -11,7 +11,8 @@ data class QuoteRef(
     var content: String,
     val sage: Int,
     val status: String,
-    val admin: Int
+    val admin: Int,
+    val isThread: Boolean = false
 )
 fun emptyQuoteRefWithContent(content: String,id: Long): QuoteRef {
     return QuoteRef(
@@ -25,6 +26,6 @@ fun emptyQuoteRefWithContent(content: String,id: Long): QuoteRef {
         content = content,
         sage = 0,
         status = "",
-        admin = 0
+        admin = 0,
     )
 }

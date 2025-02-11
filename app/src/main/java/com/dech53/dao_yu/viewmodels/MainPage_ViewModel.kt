@@ -1,12 +1,10 @@
 package com.dech53.dao_yu.viewmodels
 
 import android.util.Log
-import android.widget.Toast
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.dech53.dao_yu.dao.CookieDao
 import com.dech53.dao_yu.dao.FavoriteDao
@@ -15,10 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.dech53.dao_yu.models.*
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.update
 
 class MainPage_ViewModel(private val cookieDao: CookieDao, private val favDao: FavoriteDao) :
     ViewModel() {
@@ -35,9 +30,11 @@ class MainPage_ViewModel(private val cookieDao: CookieDao, private val favDao: F
         private set
 
     //TODO add dialog to change page id
-    var forumId = mutableStateOf("53")
+    var forumId = mutableStateOf("1")
 
-    var title = mutableStateOf("婆罗门一")
+    var mainForumId = mutableStateOf("999")
+
+    var title = mutableStateOf("综合线")
 
     fun insertFav(fav: Favorite) {
         viewModelScope.launch {
@@ -91,8 +88,10 @@ class MainPage_ViewModel(private val cookieDao: CookieDao, private val favDao: F
     }
 
     init {
-        initHash()
-        getAllFav()
+//        initHash()
+//        getAllFav()
+        isThread.value = mainForumId.value == "999"
+
     }
 
     // initial request
@@ -110,17 +109,15 @@ class MainPage_ViewModel(private val cookieDao: CookieDao, private val favDao: F
                     withContext(Dispatchers.Main) {
                         isInitialLoad.value = false
                         _dataState.value = data
-
                     }
                 }
             } catch (e: Exception) {
                 onError.value = true
                 Log.d("main_page", "加载失败")
-                Log.d("main_page datastate", dataState.value.toString())
-                Log.d("main_page onError", onError.value.toString())
             }
         }
     }
+
 
     var isInitialLoad = mutableStateOf(true)
 
@@ -153,8 +150,8 @@ class MainPage_ViewModel(private val cookieDao: CookieDao, private val favDao: F
         }
     }
 
-    fun changeForumId(id: String, showIcon: Boolean) {
-        if (id in setOf("1", "2", "3")) isThread.value = true
+    fun changeForumId(id: String, showIcon: Boolean,categoryId:String = "") {
+        if (id in setOf("1", "2", "3") && categoryId == "999") isThread.value = true
         else isThread.value = false
         if (forumId.value != id) {
             forumId.value = id
@@ -172,22 +169,30 @@ class MainPage_ViewModel(private val cookieDao: CookieDao, private val favDao: F
 //        isChangeForumIdDialogVisible.value = !isChangeForumIdDialogVisible.value
 //    }
 
-    fun loadMore() {
+    fun loadMore(onComplete:()->Unit) {
         Log.d("main_page加载第${pageId.value}测试", "触发")
         viewModelScope.launch {
             pageId.value++
-            val newData = withContext(Dispatchers.IO) {
-                Http_request.get<Thread>(
-                    if (!isThread.value) "showf?id=${forumId.value}&page=${pageId.value}" else "timeline?id=${forumId.value}&page=${pageId.value}",
-                    cookie.value?.cookie ?: ""
-                )
+            try {
+                val newData = withContext(Dispatchers.IO) {
+                    Http_request.get<Thread>(
+                        if (!isThread.value) "showf?id=${forumId.value}&page=${pageId.value}"
+                        else "timeline?id=${forumId.value}&page=${pageId.value}",
+                        cookie.value?.cookie ?: ""
+                    )
+                }
+                withContext(Dispatchers.Main) {
+                    isInitialLoad.value = true
+                    _dataState.value = (_dataState.value.orEmpty() + newData!!)
+                }
+            } catch (e: Exception) {
+                Log.e("loadMore", "请求失败: ${e.message}", e)
+                pageId.value--
             }
-            withContext(Dispatchers.Main) {
-                isInitialLoad.value = true
-                _dataState.value = (_dataState.value.orEmpty() + newData!!)
-            }
+            onComplete()
         }
     }
+
 
     fun resetPageId() {
         pageId.value = 1

@@ -6,6 +6,7 @@ import android.util.Log
 import com.dech53.dao_yu.models.QuoteRef
 import com.dech53.dao_yu.models.Thread
 import com.dech53.dao_yu.models.emptyQuoteRefWithContent
+import com.dech53.dao_yu.models.toQuoteRef
 import com.dech53.dao_yu.static.Url
 import okhttp3.CookieJar
 import okhttp3.OkHttpClient
@@ -85,21 +86,49 @@ object Http_request {
     }
 
     fun getRef(id: String, cookie: String): QuoteRef? {
-        val adapter = moshi.adapter<QuoteRef>(QuoteRef::class.java)
-        val request = Request.Builder()
+        val Qadapter = moshi.adapter(QuoteRef::class.java)
+        val Tadapter = moshi.adapter(Thread::class.java)
+
+        // 先尝试请求 thread
+        val threadRequest = Request.Builder()
             .get()
-            .addHeader("Cookie", "userhash=${cookie}")
-            .url(Url.API_BASE_URL + "ref?id=${id}")
+            .addHeader("Cookie", "userhash=$cookie")
+            .url(Url.API_BASE_URL + "thread?id=$id")
             .build()
-        val call = client.newCall(request)
-        val response = call.execute()
-        val responseBody = response.body?.string() ?: ""
-        Log.d("request data", responseBody)
+
+        val threadCall = client.newCall(threadRequest)
+        val threadResponse = threadCall.execute()
+        val threadResponseBody = threadResponse.body?.string() ?: ""
+
+        Log.d("request thread data", threadResponseBody)
+
         try {
-            val quoteRef = adapter.fromJson(responseBody)
+            val thread = Tadapter.fromJson(threadResponseBody)
+            if (thread != null) {
+                return thread.toQuoteRef()
+            }
+        } catch (e: Exception) {
+            Log.e("Thread parse error", e.toString())
+        }
+
+        // 如果 thread 解析失败或返回为空，则请求 ref
+        val refRequest = Request.Builder()
+            .get()
+            .addHeader("Cookie", "userhash=$cookie")
+            .url(Url.API_BASE_URL + "ref?id=$id")
+            .build()
+
+        val refCall = client.newCall(refRequest)
+        val refResponse = refCall.execute()
+        val refResponseBody = refResponse.body?.string() ?: ""
+
+        Log.d("request ref data", refResponseBody)
+
+        try {
+            val quoteRef = Qadapter.fromJson(refResponseBody)
             return quoteRef
         } catch (e: Exception) {
-            val json = JSONObject(responseBody)
+            val json = JSONObject(refResponseBody)
             Log.d("json", json.toString())
             Log.d("json", json.getString("error"))
             return emptyQuoteRefWithContent(
@@ -107,8 +136,8 @@ object Http_request {
                 id.toLong()
             )
         }
-        return emptyQuoteRefWithContent("未知错误", id.toLong())
     }
+
 
     fun postThread(content: String, fid: Int, cookie: String) {
         val requestData = FormBody.Builder()

@@ -2,6 +2,7 @@ package com.dech53.dao_yu.component
 
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -32,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.dech53.dao_yu.ImageViewer
+import com.dech53.dao_yu.ThreadAndReplyView
 import com.dech53.dao_yu.models.QuoteRef
 import com.dech53.dao_yu.static.Url
 import com.dech53.dao_yu.viewmodels.ThreadInfoView_ViewModel
@@ -95,11 +98,6 @@ fun QuotedComponent(
                         modifier = Modifier
                             .width(100.dp)
                             .clip(RoundedCornerShape(4.dp))
-                            .border(
-                                1.dp,
-                                MaterialTheme.colorScheme.outline,
-                                RoundedCornerShape(8.dp)
-                            )
                             .clickable(
                                 indication = rememberRipple(bounded = true),
                                 interactionSource = remember { MutableInteractionSource() }
@@ -109,6 +107,16 @@ fun QuotedComponent(
                                 context.startActivity(intent)
                             }
                     )
+                    if (quoteRef.isThread){
+                        TextButton(onClick = {
+                            val intent = Intent(context, ThreadAndReplyView::class.java)
+                            intent.putExtra("threadId", quoteRef.id.toString())
+                            intent.putExtra("hash", viewModel.hash.value)
+                            context.startActivity(intent)
+                        }) {
+                            Text("查看原串")
+                        }
+                    }
                 }
             }
             //floating id

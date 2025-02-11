@@ -550,7 +550,7 @@ class ThreadAndReplyView : ComponentActivity() {
 //                                )
                                 val poster = threadInfo!![0].user_hash
                                 val pullToRefreshState = rememberPullToRefreshState()
-
+                                var isLoadingMore by remember { mutableStateOf(false) }
                                 Box(
                                     contentAlignment = Alignment.TopCenter,
                                     modifier = Modifier
@@ -563,26 +563,7 @@ class ThreadAndReplyView : ComponentActivity() {
                                         modifier = Modifier.fillMaxSize()
                                     ) {
                                         itemsIndexed(threadInfo!!) { index, reply ->
-                                            val interactionSource =
-                                                remember { MutableInteractionSource() }
-                                            val date_ = Regex(pattern = "-").replace(
-                                                Regex(pattern = "[^\\(]*|(?<=\\))[^\\)]*").find(
-                                                    reply.now
-                                                )!!.value,
-                                                "/"
-                                            )
                                             val context = LocalContext.current
-                                            val imageLoader = remember {
-                                                ImageLoader.Builder(context)
-                                                    .components {
-                                                        if (SDK_INT >= 28) {
-                                                            add(AnimatedImageDecoder.Factory())
-                                                        } else {
-                                                            add(GifDecoder.Factory())
-                                                        }
-                                                    }
-                                                    .build()
-                                            }
                                             if (reply.id != 9999999) {
                                                 TRCard(
                                                     posterName = poster,
@@ -640,8 +621,23 @@ class ThreadAndReplyView : ComponentActivity() {
                                             }
                                             //load more data when scroll to the bottom
                                             LaunchedEffect(Unit) {
-                                                if (index == lazyListState.layoutInfo.totalItemsCount - 1) {
-                                                    viewModel.loadMore("F")
+                                                if (index == lazyListState.layoutInfo.totalItemsCount - 1 && viewModel.pageId.value <= viewModel.maxPage.value) {
+                                                    isLoadingMore = true
+                                                    viewModel.loadMore("F", onComplete = {
+                                                        isLoadingMore = false
+                                                    })
+                                                }
+                                            }
+                                        }
+                                        if (isLoadingMore) {
+                                            item {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(16.dp),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    CircularProgressIndicator()
                                                 }
                                             }
                                         }
@@ -689,11 +685,17 @@ class ThreadAndReplyView : ComponentActivity() {
                                             }
                                         },
                                         modifier = Modifier.width(100.dp),
-                                        textStyle = TextStyle(fontSize = 16.sp, textAlign = TextAlign.Center),
-                                        keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                                        textStyle = TextStyle(
+                                            fontSize = 16.sp,
+                                            textAlign = TextAlign.Center
+                                        ),
+                                        keyboardOptions = KeyboardOptions.Default.copy(
+                                            keyboardType = KeyboardType.Number,
+                                            imeAction = ImeAction.Done
+                                        ),
                                         keyboardActions = KeyboardActions(onDone = {
                                             viewModel.pageId.value = page.value
-                                            viewModel.loadMore("B",page.value)
+                                            viewModel.loadMore("B", page.value)
                                             isChangePageVisible.value = !isChangePageVisible.value
                                         })
                                     )

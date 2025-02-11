@@ -13,9 +13,7 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -66,25 +64,25 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.room.Room
 import com.dech53.dao_yu.component.ForumCategoryDialog
 import com.dech53.dao_yu.component.MainButtonItems
 import com.dech53.dao_yu.component.PullToRefreshLazyColumn
 import com.dech53.dao_yu.dao.CookieDatabase
-import com.dech53.dao_yu.dao.FavoriteDao
 import com.dech53.dao_yu.dao.FavoriteDataBase
 import com.dech53.dao_yu.models.Cookie
 import com.dech53.dao_yu.models.Favorite
 import com.dech53.dao_yu.static.forumCategories
+import com.dech53.dao_yu.static.forumMap
 import com.dech53.dao_yu.viewmodels.MainPage_ViewModel
 import com.dech53.dao_yu.views.FavView
 import com.dech53.dao_yu.views.SettingsView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -117,9 +115,14 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        scope.cancel()
+    }
+
     override fun onResume() {
         super.onResume()
-        scope.launch(Dispatchers.IO) {
+        lifecycleScope.launch {
             viewModel.initHash()
         }
     }
@@ -140,10 +143,13 @@ fun Main_Page(
     val onError by remember { viewModel.onError }
 
     LaunchedEffect(dataState) {
-        if (!viewModel.isInitialLoad.value) {
-            lazyListState.animateScrollToItem(0)
+        dataState?.let {
+            if (!viewModel.isInitialLoad.value) {
+                lazyListState.animateScrollToItem(0)
+            }
         }
     }
+
     if (onError) {
         Box(
             modifier = Modifier
@@ -182,6 +188,7 @@ fun Main_Page(
             )
         }
     } else {
+        var forunCategoryId by viewModel.mainForumId
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
@@ -203,42 +210,57 @@ fun Main_Page(
                 PullToRefreshLazyColumn(
                     items = dataState!!,
                     lazyListState = lazyListState,
-                    content = { item,modifier ->
-                        Forum_card(thread = item, imgClickAction = {
-                            val intent = Intent(context, ImageViewer::class.java)
-                            intent.putExtra("imgName", item.img + item.ext)
-                            context.startActivity(intent)
-                        }, cardClickAction = {
-                            Log.d("外部单点", "${item}")
-                            val intent = Intent(context, ThreadAndReplyView::class.java)
-                            intent.putExtra("threadId", item.id.toString())
-                            intent.putExtra("hash", cookie?.cookie ?: "")
-                            if (viewModel.hasId(item.id)) {
-                                intent.putExtra("hasId", true)
-                            }
-                            context.startActivity(intent)
-                        }, cardLongClickAction = {//下拉菜单选项判断操作
-                            Log.d("菜单点击", "${item}")
-                            when (it) {
-                                "收藏" -> (viewModel.insertFav(
-                                    Favorite(
-                                        item.id.toString(),
-                                        item.content,
-                                        img = item.img + item.ext
+                    content = { item ->
+                        Forum_card(
+                            thread = item,
+                            imgClickAction = {
+                                val intent = Intent(context, ImageViewer::class.java)
+                                intent.putExtra("imgName", item.img + item.ext)
+                                context.startActivity(intent)
+                            },
+                            cardClickAction = {
+                                Log.d("外部单点", "${item}")
+                                val intent = Intent(context, ThreadAndReplyView::class.java)
+                                intent.putExtra("threadId", item.id.toString())
+                                intent.putExtra("hash", cookie?.cookie ?: "")
+                                if (viewModel.hasId(item.id)) {
+                                    intent.putExtra("hasId", true)
+                                }
+                                context.startActivity(intent)
+                            },
+                            cardLongClickAction = {//下拉菜单选项判断操作
+                                Log.d("菜单点击", "${item}")
+                                when (it) {
+                                    "收藏" -> (viewModel.insertFav(
+                                        Favorite(
+                                            item.id.toString(),
+                                            item.content,
+                                            img = item.img + item.ext
+                                        )
+                                    ))
+
+                                    "屏蔽饼干" -> (Toast.makeText(
+                                        context,
+                                        "屏蔽饼干",
+                                        Toast.LENGTH_SHORT
                                     )
-                                ))
+                                        .show())
 
-                                "屏蔽饼干" -> (Toast.makeText(
-                                    context,
-                                    "屏蔽饼干",
-                                    Toast.LENGTH_SHORT
-                                )
-                                    .show())
-
-                                "订阅" -> (Toast.makeText(context, "订阅", Toast.LENGTH_SHORT)
-                                    .show())
-                            }
-                        }, stricted = true, posterName = "", modifier = modifier)
+                                    "订阅" -> (Toast.makeText(context, "订阅", Toast.LENGTH_SHORT)
+                                        .show())
+                                }
+                            },
+                            stricted = true,
+                            posterName = "",
+                            forumId = item.fid.toString(),
+                            forumIdClickAction = {
+                                viewModel.changeForumId(item.fid.toString(), true)
+                                viewModel.mainForumId.value = ""
+                                viewModel.changeTitle(forumMap[item.fid.toString()]!!)
+                            },
+                            mainForumId = viewModel.forumId.value,
+                            forumCategoryId = forunCategoryId
+                        )
                     },
                     isRefreshing = isRefreshing,
                     //refreshing method
@@ -246,8 +268,8 @@ fun Main_Page(
                         viewModel.refreshData(true, lazyListState)
                     },
                     contentPadding = padding,
-                    loadMore = {
-                        viewModel.loadMore()
+                    loadMore = {onComplete->
+                        viewModel.loadMore(onComplete)
                     }
                 )
             }
@@ -269,7 +291,10 @@ fun Main_Screen(viewModel: MainPage_ViewModel, cookie: Cookie?) {
 
     val title by remember { viewModel.title }
     LaunchedEffect(Unit) {
+        viewModel.initHash()
+        viewModel.getAllFav()
         withContext(Dispatchers.IO) {
+            delay(100)
             viewModel.loadData()
         }
     }

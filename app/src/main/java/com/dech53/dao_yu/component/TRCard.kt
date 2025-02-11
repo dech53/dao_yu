@@ -103,6 +103,7 @@ fun TRCard(
                 }
             )
     ) {
+
         Column(modifier = Modifier.padding(12.dp)) {
             Row(
                 horizontalArrangement = Arrangement.SpaceBetween,

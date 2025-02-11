@@ -39,6 +39,23 @@ fun Thread.toReply(): Reply {
     )
 }
 
-fun Thread.toReplies():List<Reply>{
+fun Thread.toQuoteRef(): QuoteRef {
+    return QuoteRef(
+        id = this.id.toLong(),
+        img = this.img ?: "",
+        ext = this.ext ?: "",
+        now = this.now,
+        user_hash = this.user_hash,
+        name = this.name,
+        title = this.title,
+        content = this.content,
+        sage = this.sage,
+        status = "",
+        admin = this.admin,
+        isThread = true
+    )
+}
+
+fun Thread.toReplies(): List<Reply> {
     return listOf(this.toReply()) + this.Replies
 }

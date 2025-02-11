@@ -152,49 +152,74 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val fav
         _threadInfo.value = null
     }
 
-    fun loadMore(direction: String, skipPage: Int? = null) {
+    fun loadMore(direction: String, skipPage: Int? = null, onComplete: () -> Unit = {}) {
         if (direction == "F") {
-            if (pageId.value > maxPage.value) canUseRequest.value = false else canUseRequest.value = true
+            if (pageId.value > maxPage.value) {
+                canUseRequest.value = false
+            } else {
+                canUseRequest.value = true
+            }
+
             if (canUseRequest.value) {
                 Log.d("thread_page加载第${pageId.value}测试", "触发")
                 isIndicatorVisible.value = true
                 viewModelScope.launch {
-                    pageId.value++
-                    val newData = withContext(Dispatchers.IO) {
-                        Http_request.getThreadInfo(
-                            "thread?id=${threadId.value}&page=${pageId.value}",
-                            hash.value
-                        )
+                    pageId.value++  // 先增加页数
+                    try {
+                        val newData = withContext(Dispatchers.IO) {
+                            Http_request.getThreadInfo(
+                                "thread?id=${threadId.value}&page=${pageId.value}",
+                                hash.value
+                            )
+                        }
+                        newData?.let {
+                            Log.d("新获取的数据", it.toReplies().drop(1).size.toString())
+                            _threadInfo.value =
+                                (_threadInfo.value.orEmpty() + it.toReplies().drop(1))
+                        } ?: run {
+                            Log.e("loadMore", "获取数据失败，服务器返回 null")
+                            pageId.value--  // 数据获取失败，回滚页数
+                        }
+                    } catch (e: Exception) {
+                        Log.e("loadMore", "请求失败: ${e.message}", e)
+                        pageId.value--  // 出错回滚页数
+                    } finally {
+                        isIndicatorVisible.value = false  // 确保指示器关闭
+                        onComplete()  // 确保回调执行
                     }
-                    Log.d("新获取的数据", newData!!.toReplies().drop(1).size.toString())
-                    _threadInfo.value =
-                        (_threadInfo.value.orEmpty() + newData!!.toReplies().drop(1))
-                    isIndicatorVisible.value = false
                 }
-
             } else {
                 Log.d("thread_page加载第${pageId.value}测试", "未触发")
             }
         } else if (direction == "B") {
             isIndicatorVisible.value = true
             viewModelScope.launch {
-                val newData = withContext(Dispatchers.IO) {
-                    Http_request.getThreadInfo(
-                        "thread?id=${threadId.value}&page=${skipPage}",
-                        hash.value
-                    )
+                try {
+                    val newData = withContext(Dispatchers.IO) {
+                        Http_request.getThreadInfo(
+                            "thread?id=${threadId.value}&page=${skipPage}",
+                            hash.value
+                        )
+                    }
+                    newData?.let {
+                        Log.d("新获取的数据", it.toReplies().drop(1).size.toString())
+                        _threadInfo.value =
+                            _threadInfo.value.orEmpty().toMutableList().let { list ->
+                                listOf(list.first()) + it.toReplies().drop(1)
+                            }
+                    } ?: Log.e("loadMore", "获取数据失败，服务器返回 null")
+                } catch (e: Exception) {
+                    Log.e("loadMore", "请求失败: ${e.message}", e)
+                } finally {
+                    isIndicatorVisible.value = false  // 确保指示器关闭
+                    onComplete()  // 确保回调执行
                 }
-                Log.d("新获取的数据", newData!!.toReplies().drop(1).size.toString())
-                _threadInfo.value = _threadInfo.value.orEmpty().toMutableList().let { list ->
-                    listOf(list.first()) + newData.toReplies().drop(1)
-                }
-
-                isIndicatorVisible.value = false
             }
         } else {
             Log.d("thread_page加载第${pageId.value}测试", "未触发")
         }
     }
+
 
     fun resetPageId() {
         pageId.value = 1

@@ -129,17 +129,12 @@ fun ExpandableCategory(
                             .padding(start = 5.dp)
                             .clickable {
                                 isExpanded = !isExpanded
-                                if (forum.id in setOf("1", "2", "3")) {
-                                    viewModel.changeForumId(
-                                        forum.id,
-                                        true,
-                                    )
-                                } else {
-                                    viewModel.changeForumId(
-                                        forum.id,
-                                        true,
-                                    )
-                                }
+                                viewModel.mainForumId.value = category.id
+                                viewModel.changeForumId(
+                                    forum.id,
+                                    true,
+                                    category.id
+                                )
                                 viewModel.changeTitle(forum.name)
                                 changeDrawerState()
                             },
