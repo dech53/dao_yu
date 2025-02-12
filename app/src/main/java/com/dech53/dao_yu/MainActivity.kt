@@ -84,6 +84,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -135,19 +138,22 @@ fun Main_Page(
     viewModel: MainPage_ViewModel,
     cookie: Cookie?,
 ) {
-    val dataState by viewModel.dataState
+    val dataState = viewModel.dataState
     val isRefreshing by remember { viewModel.isRefreshing }
     val interactionSource = remember { MutableInteractionSource() }
     val lazyListState = rememberLazyListState()
     val context = LocalContext.current
     val onError by remember { viewModel.onError }
 
-    LaunchedEffect(dataState) {
-        dataState?.let {
-            if (!viewModel.isInitialLoad.value) {
-                lazyListState.animateScrollToItem(0)
+    LaunchedEffect(Unit) {
+        snapshotFlow { dataState.size }
+            .drop(1)
+            .distinctUntilChanged()
+            .collectLatest { newSize ->
+                if (newSize > 0 && !viewModel.isInitialLoad.value) {
+                    lazyListState.scrollToItem(0)
+                }
             }
-        }
     }
 
     if (onError) {
@@ -174,7 +180,7 @@ fun Main_Page(
                 }
             )
         }
-    } else if (dataState == null) {
+    } else if (dataState.isEmpty()) {
         Box(
             modifier = Modifier
                 .fillMaxSize(),
@@ -196,83 +202,81 @@ fun Main_Page(
         ) {
             var visible = remember { mutableStateOf(false) }
             val scope = rememberCoroutineScope()
-            LaunchedEffect(Unit) {
-                scope.launch {
-                    delay(100)
-                    visible.value = true
-                }
-            }
-            AnimatedVisibility(
-                visible = visible.value,
-                enter = fadeIn() + slideInHorizontally(),
-                exit = fadeOut() + slideOutHorizontally()
-            ) {
-                PullToRefreshLazyColumn(
-                    items = dataState!!,
-                    lazyListState = lazyListState,
-                    content = { item ->
-                        Forum_card(
-                            thread = item,
-                            imgClickAction = {
-                                val intent = Intent(context, ImageViewer::class.java)
-                                intent.putExtra("imgName", item.img + item.ext)
-                                context.startActivity(intent)
-                            },
-                            cardClickAction = {
-                                Log.d("外部单点", "${item}")
-                                val intent = Intent(context, ThreadAndReplyView::class.java)
-                                intent.putExtra("threadId", item.id.toString())
-                                intent.putExtra("hash", cookie?.cookie ?: "")
-                                if (viewModel.hasId(item.id)) {
-                                    intent.putExtra("hasId", true)
-                                }
-                                context.startActivity(intent)
-                            },
-                            cardLongClickAction = {//下拉菜单选项判断操作
-                                Log.d("菜单点击", "${item}")
-                                when (it) {
-                                    "收藏" -> (viewModel.insertFav(
-                                        Favorite(
-                                            item.id.toString(),
-                                            item.content,
-                                            img = item.img + item.ext
-                                        )
-                                    ))
-
-                                    "屏蔽饼干" -> (Toast.makeText(
-                                        context,
-                                        "屏蔽饼干",
-                                        Toast.LENGTH_SHORT
+//            AnimatedVisibility(
+//                visible = visible.value,
+//                enter = fadeIn() + slideInHorizontally(),
+//                exit = fadeOut() + slideOutHorizontally()
+//            ) {
+            PullToRefreshLazyColumn(
+                items = dataState!!,
+                lazyListState = lazyListState,
+                content = { item ->
+                    Forum_card(
+                        thread = item,
+                        imgClickAction = {
+                            val intent = Intent(context, ImageViewer::class.java)
+                            intent.putExtra("imgName", item.img + item.ext)
+                            context.startActivity(intent)
+                        },
+                        cardClickAction = {
+                            Log.d("外部单点", "${item}")
+                            val intent = Intent(context, ThreadAndReplyView::class.java)
+                            intent.putExtra("threadId", item.id.toString())
+                            intent.putExtra("hash", cookie?.cookie ?: "")
+                            if (viewModel.hasId(item.id)) {
+                                intent.putExtra("hasId", true)
+                            }
+                            context.startActivity(intent)
+                        },
+                        cardLongClickAction = {//下拉菜单选项判断操作
+                            Log.d("菜单点击", "${item}")
+                            when (it) {
+                                "收藏" -> (viewModel.insertFav(
+                                    Favorite(
+                                        item.id.toString(),
+                                        item.content,
+                                        img = item.img + item.ext
                                     )
-                                        .show())
+                                ))
 
-                                    "订阅" -> (Toast.makeText(context, "订阅", Toast.LENGTH_SHORT)
-                                        .show())
-                                }
-                            },
-                            stricted = true,
-                            posterName = "",
-                            forumId = item.fid.toString(),
-                            forumIdClickAction = {
-                                viewModel.changeForumId(item.fid.toString(), true)
-                                viewModel.mainForumId.value = ""
-                                viewModel.changeTitle(forumMap[item.fid.toString()]!!)
-                            },
-                            mainForumId = viewModel.forumId.value,
-                            forumCategoryId = forunCategoryId
-                        )
-                    },
-                    isRefreshing = isRefreshing,
-                    //refreshing method
-                    onRefresh = {
-                        viewModel.refreshData(true, lazyListState)
-                    },
-                    contentPadding = padding,
-                    loadMore = {onComplete->
-                        viewModel.loadMore(onComplete)
-                    }
-                )
-            }
+                                "屏蔽饼干" -> (Toast.makeText(
+                                    context,
+                                    "屏蔽饼干",
+                                    Toast.LENGTH_SHORT
+                                )
+                                    .show())
+
+                                "订阅" -> (Toast.makeText(
+                                    context,
+                                    "订阅",
+                                    Toast.LENGTH_SHORT
+                                )
+                                    .show())
+                            }
+                        },
+                        stricted = true,
+                        posterName = "",
+                        forumId = item.fid.toString(),
+                        forumIdClickAction = {
+                            viewModel.changeForumId(item.fid.toString(), true)
+                            viewModel.mainForumId.value = ""
+                            viewModel.changeTitle(forumMap[item.fid.toString()]!!)
+                        },
+                        mainForumId = viewModel.forumId.value,
+                        forumCategoryId = forunCategoryId
+                    )
+                },
+                isRefreshing = isRefreshing,
+                //refreshing method
+                onRefresh = {
+                    viewModel.refreshData(true, lazyListState)
+                },
+                contentPadding = padding,
+                loadMore = { onComplete ->
+                    viewModel.loadMore(onComplete)
+                }
+            )
+//            }
 //            if (viewModel.isChangeForumIdDialogVisible.value) {
 //                ForumCategoryDialog(forumCategory = forumCategories, viewModel = viewModel)
 //            }

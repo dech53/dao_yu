@@ -116,7 +116,8 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val fav
                 maxPage.value =
                     if (replyCount.value % 20 == 0) replyCount.value / 20 else replyCount.value / 20 + 1
                 Log.d("能加载的最多页数", maxPage.value.toString())
-                _threadInfo.value = newData!!.toReplies()
+                _threadInfo.value = newData.toReplies()
+                newData.toReplies().map { it.toQuoteRef() }.forEach { quoteRef ->  contentContext[quoteRef.id.toString()] = quoteRef }
                 isRefreshing.value = false
             } catch (e: Exception) {
                 onError.value = true
@@ -159,12 +160,11 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val fav
             } else {
                 canUseRequest.value = true
             }
-
             if (canUseRequest.value) {
                 Log.d("thread_page加载第${pageId.value}测试", "触发")
                 isIndicatorVisible.value = true
                 viewModelScope.launch {
-                    pageId.value++  // 先增加页数
+                    pageId.value++
                     try {
                         val newData = withContext(Dispatchers.IO) {
                             Http_request.getThreadInfo(
@@ -176,16 +176,17 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val fav
                             Log.d("新获取的数据", it.toReplies().drop(1).size.toString())
                             _threadInfo.value =
                                 (_threadInfo.value.orEmpty() + it.toReplies().drop(1))
+                            newData.toReplies().map { it.toQuoteRef() }.forEach { quoteRef ->  contentContext[quoteRef.id.toString()] = quoteRef }
                         } ?: run {
                             Log.e("loadMore", "获取数据失败，服务器返回 null")
-                            pageId.value--  // 数据获取失败，回滚页数
+                            pageId.value--
                         }
                     } catch (e: Exception) {
                         Log.e("loadMore", "请求失败: ${e.message}", e)
-                        pageId.value--  // 出错回滚页数
+                        pageId.value--
                     } finally {
-                        isIndicatorVisible.value = false  // 确保指示器关闭
-                        onComplete()  // 确保回调执行
+                        isIndicatorVisible.value = false
+                        onComplete()
                     }
                 }
             } else {
@@ -207,12 +208,13 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val fav
                             _threadInfo.value.orEmpty().toMutableList().let { list ->
                                 listOf(list.first()) + it.toReplies().drop(1)
                             }
+                        newData.toReplies().map { it.toQuoteRef() }.forEach { quoteRef ->  contentContext[quoteRef.id.toString()] = quoteRef }
                     } ?: Log.e("loadMore", "获取数据失败，服务器返回 null")
                 } catch (e: Exception) {
                     Log.e("loadMore", "请求失败: ${e.message}", e)
                 } finally {
-                    isIndicatorVisible.value = false  // 确保指示器关闭
-                    onComplete()  // 确保回调执行
+                    isIndicatorVisible.value = false
+                    onComplete()
                 }
             }
         } else {

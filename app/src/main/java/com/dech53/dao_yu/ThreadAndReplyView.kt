@@ -568,10 +568,6 @@ class ThreadAndReplyView : ComponentActivity() {
                                                 TRCard(
                                                     posterName = poster,
                                                     item = reply,
-                                                    lazyListState = lazyListState,
-                                                    loadMore = {
-                                                        viewModel.loadMore("F")
-                                                    },
                                                     viewModel
                                                 )
                                             } else {

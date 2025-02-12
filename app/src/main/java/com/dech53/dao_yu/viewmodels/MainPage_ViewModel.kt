@@ -3,6 +3,7 @@ package com.dech53.dao_yu.viewmodels
 import android.util.Log
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -17,8 +18,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 
 class MainPage_ViewModel(private val cookieDao: CookieDao, private val favDao: FavoriteDao) :
     ViewModel() {
-    private val _dataState = mutableStateOf<List<Thread>?>(null)
-    val dataState: State<List<Thread>?> = _dataState
+    private val _dataState = mutableStateListOf<Thread>()
+    val dataState: List<Thread> get() = _dataState
+
 
     var isThread = mutableStateOf(false)
         private set
@@ -99,7 +101,7 @@ class MainPage_ViewModel(private val cookieDao: CookieDao, private val favDao: F
         viewModelScope.launch {
             try {
                 onError.value = false
-                if (_dataState.value == null) {
+                if (_dataState.isEmpty()) {
                     val data = withContext(Dispatchers.IO) {
                         Http_request.get<Thread>(
                             if (!isThread.value) "showf?id=${forumId.value}" else "timeline?id=${forumId.value}",
@@ -108,7 +110,7 @@ class MainPage_ViewModel(private val cookieDao: CookieDao, private val favDao: F
                     }
                     withContext(Dispatchers.Main) {
                         isInitialLoad.value = false
-                        _dataState.value = data
+                        _dataState.addAll(data?: emptyList())
                     }
                 }
             } catch (e: Exception) {
@@ -137,23 +139,25 @@ class MainPage_ViewModel(private val cookieDao: CookieDao, private val favDao: F
                 }
                 withContext(Dispatchers.Main) {
                     isInitialLoad.value = false
-                    _dataState.value = newData
+                    _dataState.clear()
+                    _dataState.addAll(newData?: emptyList())
+                    resetPageId()
                 }
-                resetPageId()
                 if (showIcon) {
                     isRefreshing.value = false
                 }
             } catch (e: Exception) {
                 onError.value = true
-                _dataState.value = null
+                Log.d("main_page", "刷新失败: ${e.message}")
             }
         }
     }
 
+
     fun changeForumId(id: String, showIcon: Boolean,categoryId:String = "") {
         if (id in setOf("1", "2", "3") && categoryId == "999") isThread.value = true
         else isThread.value = false
-        if (forumId.value != id) {
+        if (forumId.value != id || forumId.value in setOf("2", "3")) {
             forumId.value = id
             refreshData(showIcon, null)
         }
@@ -183,7 +187,7 @@ class MainPage_ViewModel(private val cookieDao: CookieDao, private val favDao: F
                 }
                 withContext(Dispatchers.Main) {
                     isInitialLoad.value = true
-                    _dataState.value = (_dataState.value.orEmpty() + newData!!)
+                    _dataState.addAll(newData!!)
                 }
             } catch (e: Exception) {
                 Log.e("loadMore", "请求失败: ${e.message}", e)

@@ -84,11 +84,11 @@ fun FavView(padding: PaddingValues, hash: String, viewModel: MainPage_ViewModel)
                 visible.value = true
             }
         }
-        AnimatedVisibility(
-            visible = visible.value,
-            enter = fadeIn() + slideInHorizontally(),
-            exit = fadeOut() + slideOutHorizontally()
-        ) {
+//        AnimatedVisibility(
+//            visible = visible.value,
+//            enter = fadeIn() + slideInHorizontally(),
+//            exit = fadeOut() + slideOutHorizontally()
+//        ) {
             Box(
                 modifier = Modifier
                     .padding(padding)
@@ -249,6 +249,6 @@ fun FavView(padding: PaddingValues, hash: String, viewModel: MainPage_ViewModel)
                     }
                 }
             }
-        }
+//        }
     }
 }

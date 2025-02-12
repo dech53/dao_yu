@@ -18,4 +18,21 @@ data class Reply(
     val sage: Int?,
     val admin: Int,
     val Hide: Int?
-)
+){
+    fun toQuoteRef(): QuoteRef {
+        return QuoteRef(
+            id = this.id.toLong(),
+            img = this.img,
+            ext = this.ext,
+            now = this.now,
+            user_hash = this.user_hash,
+            name = this.name,
+            title = this.title,
+            content = this.content,
+            sage = this.sage ?: 0,
+            status = "",
+            admin = this.admin,
+            isThread = false
+        )
+    }
+}

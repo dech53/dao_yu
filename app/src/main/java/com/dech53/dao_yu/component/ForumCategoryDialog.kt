@@ -66,8 +66,8 @@ fun ExpandableCategory(
     var isExpanded by remember { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
     val rotationAngle by animateFloatAsState(
-        targetValue = if (isExpanded) 90f else 0f, // 旋转角度
-        animationSpec = tween(durationMillis = 300) // 动画时长
+        targetValue = if (isExpanded) 90f else 0f,
+        animationSpec = tween(durationMillis = 300)
     )
     Column(
         modifier = Modifier
@@ -116,7 +116,7 @@ fun ExpandableCategory(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(
-                        color = MaterialTheme.colorScheme.surfaceVariant, // 改变背景颜色
+                        color = MaterialTheme.colorScheme.surfaceVariant,
                         shape = MaterialTheme.shapes.small
                     )
                     .padding(8.dp),
@@ -129,6 +129,7 @@ fun ExpandableCategory(
                             .padding(start = 5.dp)
                             .clickable {
                                 isExpanded = !isExpanded
+                                //forumId
                                 viewModel.mainForumId.value = category.id
                                 viewModel.changeForumId(
                                     forum.id,

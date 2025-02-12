@@ -49,8 +49,13 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.DpOffset
 import coil3.ImageLoader
 import coil3.compose.AsyncImage
+import coil3.disk.DiskCache
 import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
+import coil3.memory.MemoryCache
+import coil3.request.CachePolicy
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.dech53.dao_yu.R
 import com.dech53.dao_yu.static.Url
 import com.dech53.dao_yu.static.dropDownItemsList
@@ -67,27 +72,38 @@ fun Forum_card(
     mainForumId: String,
     forumId: String,
     forumIdClickAction: () -> Unit,
-    forumCategoryId:String
+    forumCategoryId: String
 ) {
     var dateRegex = Regex(pattern = "[^\\(]*|(?<=\\))[^\\)]*")
     var replace_ = Regex(pattern = "-")
-    var date_ = replace_.replace(dateRegex.find(thread.now)!!.value, "/")
+    val calculatedDate by remember(thread.now) {
+        mutableStateOf(
+            replace_.replace(dateRegex.find(thread.now)!!.value, "/")
+        )
+    }
+    val context = LocalContext.current
+    val imageLoader = remember {
+        ImageLoader.Builder(context)
+            .memoryCache {
+                MemoryCache.Builder()
+                    .maxSizePercent(context,0.25)
+                    .build()
+            }
+            .crossfade(true)
+            .build()
+    }
+    val imageModifier = Modifier
+        .size(100.dp)
+        .clip(RoundedCornerShape(4.dp))
+        .clickable(
+            indication = rememberRipple(bounded = true),
+            interactionSource = remember { MutableInteractionSource() }
+        ) { imgClickAction() }
     var isContextVisible by rememberSaveable { mutableStateOf(false) }
     var pressOffset by remember { mutableStateOf(DpOffset.Zero) }
     var itemHeight by remember { mutableStateOf(0.dp) }
     var itemWidth by remember { mutableStateOf(0.dp) }
-    val context = LocalContext.current
-    val imageLoader = remember {
-        ImageLoader.Builder(context)
-            .components {
-                if (SDK_INT >= 28) {
-                    add(AnimatedImageDecoder.Factory())
-                } else {
-                    add(GifDecoder.Factory())
-                }
-            }
-            .build()
-    }
+
     Card(
         shape = MaterialTheme.shapes.small,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
@@ -128,7 +144,7 @@ fun Forum_card(
                     }
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = date_,
+                        text = calculatedDate,
                         fontWeight = FontWeight.W500,
                         fontSize = 11.sp,
                         letterSpacing = 0.5.sp
@@ -208,17 +224,19 @@ fun Forum_card(
 
             if (thread.img != "") {
                 Spacer(modifier = Modifier.height(10.dp))
+                val imageRequest = rememberUpdatedState(
+                    Url.IMG_THUMB_QA + thread.img + thread.ext
+                )
                 AsyncImage(
                     imageLoader = imageLoader,
-                    model = Url.IMG_THUMB_QA + thread.img + thread.ext,
+                    model = ImageRequest.Builder(context)
+                        .data(imageRequest.value)
+                        .crossfade(true)
+                        .memoryCachePolicy(CachePolicy.ENABLED)
+                        .diskCachePolicy(CachePolicy.ENABLED)
+                        .build(),
                     contentDescription = "img from usr ${thread.user_hash}",
-                    modifier = Modifier
-                        .width(100.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .clickable(
-                            indication = rememberRipple(bounded = true),
-                            interactionSource = remember { MutableInteractionSource() }
-                        ) { imgClickAction() },
+                    modifier = imageModifier,
                     placeholder = painterResource(id = R.drawable.apple_touch_icon),
                     contentScale = ContentScale.Crop
                 )
@@ -227,8 +245,6 @@ fun Forum_card(
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .width(100.dp)
-                        .fillMaxSize()
                         .padding(top = 8.dp)
                         .clip(RoundedCornerShape(6.dp))
                         .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(6.dp))
@@ -239,7 +255,7 @@ fun Forum_card(
                 ) {
                     Text(
                         text = forumMap[forumId] ?: "未知版号",
-                        fontSize = 12.sp,
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
                     )

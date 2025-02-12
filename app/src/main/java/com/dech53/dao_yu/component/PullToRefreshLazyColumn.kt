@@ -4,8 +4,8 @@ package com.dech53.dao_yu.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -27,6 +27,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.dech53.dao_yu.models.Thread
 import androidx.compose.runtime.*
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,42 +41,58 @@ fun PullToRefreshLazyColumn(
     loadMore: (onComplete: () -> Unit) -> Unit,
 ) {
     val pullToRefreshState = rememberPullToRefreshState()
-    var isLoadingMore by remember { mutableStateOf(false) }
+    val loadMoreState = remember { mutableStateOf(false) }
+    val shouldLoadMore = remember {
+        derivedStateOf {
+            val layoutInfo = lazyListState.layoutInfo
+            val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()
+            val totalItems = layoutInfo.totalItemsCount
+
+            lastVisibleItem?.index == totalItems - 1 && !loadMoreState.value
+        }
+    }
+
+    LaunchedEffect(shouldLoadMore) {
+        snapshotFlow { shouldLoadMore.value }
+            .distinctUntilChanged()
+            .collect {
+                if (it) {
+                    loadMoreState.value = true
+                    loadMore {
+                        loadMoreState.value = false
+                    }
+                }
+            }
+    }
+
     Box(
         modifier = Modifier
             .nestedScroll(pullToRefreshState.nestedScrollConnection)
             .padding(contentPadding)
-            .background(Color.White)
     ) {
-        Column {
-            LazyColumn(
-                state = lazyListState,
-            ) {
-                itemsIndexed(
-                    items = items,
-                    key = { index, item -> "${index}" }) { index, item ->
+        LazyColumn(
+            state = lazyListState,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            itemsIndexed(
+                items = items,
+                key = {index,item-> "${item.id}${index}"}
+            ){
+                index, item ->
+                key("${item.id}${index}") {
                     content(item)
-                    var isLoading by remember { mutableStateOf(false) }
-                    LaunchedEffect(lazyListState.layoutInfo.totalItemsCount) {
-                        if (!isLoading && index == lazyListState.layoutInfo.totalItemsCount - 1) {
-                            isLoading = true
-                            isLoadingMore = true
-                            loadMore{
-                                isLoadingMore = false
-                            }
-                        }
-                    }
                 }
-                if (isLoadingMore) {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
-                        }
+            }
+
+            item {
+                if (loadMoreState.value) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
                     }
                 }
             }
