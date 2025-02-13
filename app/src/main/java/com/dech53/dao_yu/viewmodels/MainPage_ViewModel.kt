@@ -93,11 +93,11 @@ class MainPage_ViewModel(private val cookieDao: CookieDao, private val favDao: F
 //        initHash()
 //        getAllFav()
         isThread.value = mainForumId.value == "999"
-
     }
 
     // initial request
     fun loadData() {
+        isRefreshing.value = true
         viewModelScope.launch {
             try {
                 onError.value = false
@@ -117,6 +117,7 @@ class MainPage_ViewModel(private val cookieDao: CookieDao, private val favDao: F
                 onError.value = true
                 Log.d("main_page", "加载失败")
             }
+            isRefreshing.value = false
         }
     }
 

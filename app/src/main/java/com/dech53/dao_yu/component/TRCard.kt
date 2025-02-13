@@ -5,8 +5,10 @@ package com.dech53.dao_yu.component
 import android.content.Intent
 import android.os.Build.VERSION.SDK_INT
 import android.util.Log
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -17,13 +19,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,18 +49,27 @@ import androidx.compose.runtime.*
 
 @Composable
 fun TRCard(
-    posterName:String,
+    posterName: String,
     item: Reply,
-    viewModel: ThreadInfoView_ViewModel
+    viewModel: ThreadInfoView_ViewModel,
+    modifier: Modifier
 ) {
+    Log.d("now属性", item.now)
     val date_ by remember(item.now) {
         mutableStateOf(
             Regex(pattern = "-").replace(
-                Regex(pattern = "[^\\(]*|(?<=\\))[^\\)]*").find(item.now)!!.value,
+                Regex(pattern = "[^(]*|(?<=\\))[^)]*").find(item.now)!!.value,
                 "/"
             )
         )
     }
+    val time_ by remember(item.now) {
+        mutableStateOf(
+            Regex("""\d{2}:\d{2}:\d{2}$""").find(item.now)!!.value,
+        )
+    }
+    Log.d("time正则结果",time_)
+
     val context = LocalContext.current
     val imageLoader = remember {
         ImageLoader.Builder(context)
@@ -80,27 +88,24 @@ fun TRCard(
         .clickable(
             indication = rememberRipple(bounded = true),
             interactionSource = remember { MutableInteractionSource() }
-        ) { val intent = Intent(
-            context,
-            ImageViewer::class.java
-        )
+        ) {
+            val intent = Intent(
+                context,
+                ImageViewer::class.java
+            )
             intent.putExtra(
                 "imgName",
                 item.img + item.ext
             )
             context.startActivity(
                 intent
-            ) }
-    val interactionSource =
-        remember { MutableInteractionSource() }
+            )
+        }
     Card(
         shape = MaterialTheme.shapes.small,
         border = BorderStroke(
             1.dp,
             MaterialTheme.colorScheme.primary
-        ),
-        elevation = CardDefaults.elevatedCardElevation(
-            defaultElevation = 4.dp
         ),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -123,30 +128,37 @@ fun TRCard(
                     viewModel.appendToTextField(">>No.${item.id}\n")
                 }
             )
+            .animateContentSize()
     ) {
 
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column(modifier = Modifier.padding(11.dp)) {
+//            Text(
+//                text = time_,
+//                fontWeight = FontWeight.W500,
+//                fontSize = 11.sp
+//            )
             Row(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row {
-                    if ((posterName == item.user_hash))
+                    if ((posterName == item.user_hash)) {
                         Text(
                             "Po",
                             fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp,
+                            fontSize = 11.sp,
                             color = Color.Red,
                         )
-                    Spacer(
-                        modifier = Modifier.padding(
-                            3.dp
+                        Spacer(
+                            modifier = Modifier.padding(
+                                4.dp
+                            )
                         )
-                    )
+                    }
                     Text(
                         text = date_,
-                        fontWeight = FontWeight.W500,
-                        fontSize = 13.sp
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp
                     )
                     Spacer(
                         modifier = Modifier.padding(
@@ -156,16 +168,30 @@ fun TRCard(
                     Text(
                         text = item.user_hash,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp,
+                        fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.tertiary
                     )
                 }
-                Text(
-                    text = "No.${item.id}",
-                    fontWeight = FontWeight.W500,
-                    fontSize = 13.sp
-                )
+                Row {
+                    Text(
+                        text = time_,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(
+                        modifier = Modifier.padding(
+                            5.dp
+                        )
+                    )
+                    Text(
+                        text = "No.${item.id}",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp
+                    )
+                }
             }
+
             if (item.sage == 1) {
                 Text(
                     text = "SAGE",

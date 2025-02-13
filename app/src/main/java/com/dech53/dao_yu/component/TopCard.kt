@@ -68,14 +68,13 @@ fun Forum_card(
     cardClickAction: () -> Unit,
     cardLongClickAction: (String) -> Unit,
     stricted: Boolean,
-    posterName: String?,
     mainForumId: String,
     forumId: String,
     forumIdClickAction: () -> Unit,
     forumCategoryId: String
 ) {
-    var dateRegex = Regex(pattern = "[^\\(]*|(?<=\\))[^\\)]*")
-    var replace_ = Regex(pattern = "-")
+    val dateRegex = Regex(pattern = "[^(]*|(?<=\\))[^)]*")
+    val replace_ = Regex(pattern = "-")
     val calculatedDate by remember(thread.now) {
         mutableStateOf(
             replace_.replace(dateRegex.find(thread.now)!!.value, "/")
@@ -134,26 +133,17 @@ fun Forum_card(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (!stricted && (posterName == thread.name)) {
-                        Text(
-                            text = "Poster",
-                            fontWeight = FontWeight.W500,
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.secondary
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = calculatedDate,
                         fontWeight = FontWeight.W500,
-                        fontSize = 11.sp,
+                        fontSize = 12.sp,
                         letterSpacing = 0.5.sp
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = thread.user_hash,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 11.sp,
+                        fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.tertiary
                     )
                 }
@@ -173,13 +163,7 @@ fun Forum_card(
                         Text(
                             text = thread.ReplyCount.toString(),
                             fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp
-                        )
-                    } else {
-                        Text(
-                            text = "No.${thread.id}",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp
+                            fontSize = 12.sp
                         )
                     }
                 }
@@ -214,8 +198,6 @@ fun Forum_card(
                 )
                 Spacer(modifier = Modifier.height(6.dp))
             }
-
-
 
             CommonHtmlText(
                 htmlContent = thread.content,

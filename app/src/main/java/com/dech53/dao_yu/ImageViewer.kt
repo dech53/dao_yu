@@ -83,7 +83,7 @@ fun ImageViewer(img_Location: String = "", onFinish: () -> Unit) {
         .build()}
     val items = listOf(
         PopUpDialogItem(
-            title = "保存原图",
+            title = "保存",
             color = Color.Black,
             clickAction = {
                 scope.launch {

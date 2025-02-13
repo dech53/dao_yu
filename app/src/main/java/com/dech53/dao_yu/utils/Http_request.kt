@@ -155,6 +155,8 @@ object Http_request {
     }
 
     fun replyThread(
+        name:String = "无名氏",
+        title:String = "无标题",
         content: String,
         resto: String,
         cookie: String,
@@ -165,6 +167,8 @@ object Http_request {
             .setType(MultipartBody.FORM)
             .addFormDataPart("content", content)
             .addFormDataPart("resto", resto)
+            .addFormDataPart("name", name)
+            .addFormDataPart("title", title)
 
         img?.let { uri ->
             val inputStream = context.contentResolver.openInputStream(uri)
@@ -174,12 +178,10 @@ object Http_request {
             multipartBuilder.addFormDataPart("image", fileName, requestBody)
         }
 
-        val requestBody = multipartBuilder.build()
-
         val request = Request.Builder()
             .addHeader("Cookie", "userhash=$cookie")
             .url(Url.Reply_Thread_URL)
-            .post(requestBody)
+            .post(multipartBuilder.build())
             .build()
 
         val call = client.newCall(request)

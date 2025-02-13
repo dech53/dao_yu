@@ -27,6 +27,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.dech53.dao_yu.models.Thread
 import androidx.compose.runtime.*
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,7 +48,6 @@ fun PullToRefreshLazyColumn(
             val layoutInfo = lazyListState.layoutInfo
             val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()
             val totalItems = layoutInfo.totalItemsCount
-
             lastVisibleItem?.index == totalItems - 1 && !loadMoreState.value
         }
     }
@@ -58,6 +58,7 @@ fun PullToRefreshLazyColumn(
             .collect {
                 if (it) {
                     loadMoreState.value = true
+                    delay(200)
                     loadMore {
                         loadMoreState.value = false
                     }
@@ -76,29 +77,27 @@ fun PullToRefreshLazyColumn(
         ) {
             itemsIndexed(
                 items = items,
-                key = {index,item-> "${item.id}${index}"}
-            ){
-                index, item ->
+                key = { index, item -> "${item.id}${index}" }
+            ) { index, item ->
                 key("${item.id}${index}") {
                     content(item)
                 }
             }
-
-            item {
-                if (loadMoreState.value) {
-                    Box(
+            if (loadMoreState.value) {
+                item {
+                    ShimmerCard(
+                        isLoading = loadMoreState.value,
+                        contentAfterLoading = {},
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
+                            .fillMaxSize(),
+                        amount = 1
+                    )
                 }
             }
         }
         if (pullToRefreshState.isRefreshing) {
             LaunchedEffect(true) {
+                delay(100)
                 onRefresh()
             }
         }

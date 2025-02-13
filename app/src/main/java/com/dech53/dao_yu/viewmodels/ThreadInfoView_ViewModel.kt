@@ -47,8 +47,16 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val fav
 
     var isFaved = mutableStateOf(false)
 
+    var fid = mutableStateOf("")
+
+    var isLoadingBackward = mutableStateOf(false)
+
     var pageId = mutableStateOf(1)
         private set
+
+    fun getPageId(): Int {
+        return pageId.value
+    }
 
     private val _textFieldValue = mutableStateOf(TextFieldValue())
     val textFieldValue: State<TextFieldValue> get() = _textFieldValue
@@ -98,6 +106,8 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val fav
 
     var maxPage = mutableStateOf(0)
 
+    var skipPage = mutableStateOf(1)
+
 
     var contentContext = mutableStateMapOf<String, QuoteRef>()
 
@@ -117,7 +127,9 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val fav
                     if (replyCount.value % 20 == 0) replyCount.value / 20 else replyCount.value / 20 + 1
                 Log.d("能加载的最多页数", maxPage.value.toString())
                 _threadInfo.value = newData.toReplies()
-                newData.toReplies().map { it.toQuoteRef() }.forEach { quoteRef ->  contentContext[quoteRef.id.toString()] = quoteRef }
+                newData.toReplies().map { it.toQuoteRef() }
+                    .forEach { quoteRef -> contentContext[quoteRef.id.toString()] = quoteRef }
+                fid.value = _threadInfo.value!!.get(0).fid!!.toString()
                 isRefreshing.value = false
             } catch (e: Exception) {
                 onError.value = true
@@ -153,7 +165,8 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val fav
         _threadInfo.value = null
     }
 
-    fun loadMore(direction: String, skipPage: Int? = null, onComplete: () -> Unit = {}) {
+    fun loadMore(direction: String, onComplete: () -> Unit = {}) {
+        //向下加载更多数据
         if (direction == "F") {
             if (pageId.value > maxPage.value) {
                 canUseRequest.value = false
@@ -176,7 +189,9 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val fav
                             Log.d("新获取的数据", it.toReplies().drop(1).size.toString())
                             _threadInfo.value =
                                 (_threadInfo.value.orEmpty() + it.toReplies().drop(1))
-                            newData.toReplies().map { it.toQuoteRef() }.forEach { quoteRef ->  contentContext[quoteRef.id.toString()] = quoteRef }
+                            newData.toReplies().map { it.toQuoteRef() }.forEach { quoteRef ->
+                                contentContext[quoteRef.id.toString()] = quoteRef
+                            }
                         } ?: run {
                             Log.e("loadMore", "获取数据失败，服务器返回 null")
                             pageId.value--
@@ -192,13 +207,14 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val fav
             } else {
                 Log.d("thread_page加载第${pageId.value}测试", "未触发")
             }
-        } else if (direction == "B") {
+            //向上加载更多数据
+        } else if (direction == "S") {
             isIndicatorVisible.value = true
             viewModelScope.launch {
                 try {
                     val newData = withContext(Dispatchers.IO) {
                         Http_request.getThreadInfo(
-                            "thread?id=${threadId.value}&page=${skipPage}",
+                            "thread?id=${threadId.value}&page=${skipPage.value}",
                             hash.value
                         )
                     }
@@ -208,7 +224,9 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val fav
                             _threadInfo.value.orEmpty().toMutableList().let { list ->
                                 listOf(list.first()) + it.toReplies().drop(1)
                             }
-                        newData.toReplies().map { it.toQuoteRef() }.forEach { quoteRef ->  contentContext[quoteRef.id.toString()] = quoteRef }
+                        newData.toReplies().map { it.toQuoteRef() }.forEach { quoteRef ->
+                            contentContext[quoteRef.id.toString()] = quoteRef
+                        }
                     } ?: Log.e("loadMore", "获取数据失败，服务器返回 null")
                 } catch (e: Exception) {
                     Log.e("loadMore", "请求失败: ${e.message}", e)
@@ -216,6 +234,35 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val fav
                     isIndicatorVisible.value = false
                     onComplete()
                 }
+            }
+        } else if(direction == "B") {
+            viewModelScope.launch {
+                skipPage.value--
+                try {
+                    val newData = withContext(Dispatchers.IO) {
+                        Http_request.getThreadInfo(
+                            "thread?id=${threadId.value}&page=${skipPage.value}",
+                            hash.value
+                        )
+                    }
+                    newData?.let {
+                        Log.d("新获取的数据", it.toReplies().drop(1).size.toString())
+                        _threadInfo.value = _threadInfo.value.orEmpty().toMutableList().also { list ->
+                            if (list.isNotEmpty()) {
+                                list.addAll(1, it.toReplies().drop(1))
+                            }
+                        }
+                        newData.toReplies().map { it.toQuoteRef() }.forEach { quoteRef ->
+                            contentContext[quoteRef.id.toString()] = quoteRef
+                        }
+                    } ?: Log.e("loadMore", "获取数据失败，服务器返回 null")
+                } catch (e: Exception) {
+                    Log.e("loadMore", "请求失败: ${e.message}", e)
+                    skipPage.value++
+                } finally {
+                    onComplete()
+                }
+                isLoadingBackward.value = false
             }
         } else {
             Log.d("thread_page加载第${pageId.value}测试", "未触发")
@@ -229,6 +276,8 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val fav
 
 
     fun replyThread(
+        name:String = "无名氏",
+        title:String = "无标题",
         content: String,
         resto: String,
         cookie: String,
@@ -240,7 +289,7 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val fav
         viewModelScope.launch {
             val result = withContext(Dispatchers.IO) {
                 Http_request.replyThread(
-                    content, resto, cookie, img, context
+                    name,title,content, resto, cookie, img, context
                 )
             }
             IsSending.value = false

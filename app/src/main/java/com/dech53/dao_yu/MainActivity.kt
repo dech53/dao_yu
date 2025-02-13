@@ -71,12 +71,14 @@ import androidx.navigation.compose.rememberNavController
 import com.dech53.dao_yu.component.ForumCategoryDialog
 import com.dech53.dao_yu.component.MainButtonItems
 import com.dech53.dao_yu.component.PullToRefreshLazyColumn
+import com.dech53.dao_yu.component.ShimmerCard
 import com.dech53.dao_yu.dao.CookieDatabase
 import com.dech53.dao_yu.dao.FavoriteDataBase
 import com.dech53.dao_yu.models.Cookie
 import com.dech53.dao_yu.models.Favorite
 import com.dech53.dao_yu.static.forumCategories
 import com.dech53.dao_yu.static.forumMap
+import com.dech53.dao_yu.static.forumNameMap
 import com.dech53.dao_yu.viewmodels.MainPage_ViewModel
 import com.dech53.dao_yu.views.FavView
 import com.dech53.dao_yu.views.SettingsView
@@ -145,16 +147,16 @@ fun Main_Page(
     val context = LocalContext.current
     val onError by remember { viewModel.onError }
 
-    LaunchedEffect(Unit) {
-        snapshotFlow { dataState.size }
-            .drop(1)
-            .distinctUntilChanged()
-            .collectLatest { newSize ->
-                if (newSize > 0 && !viewModel.isInitialLoad.value) {
-                    lazyListState.scrollToItem(0)
-                }
-            }
-    }
+//    LaunchedEffect(Unit) {
+//        snapshotFlow { dataState.size }
+//            .drop(1)
+//            .distinctUntilChanged()
+//            .collectLatest { newSize ->
+//                if (newSize > 0 && !viewModel.isInitialLoad.value) {
+//                    lazyListState.scrollToItem(0)
+//                }
+//            }
+//    }
 
     if (onError) {
         Box(
@@ -180,107 +182,102 @@ fun Main_Page(
                 }
             )
         }
-    } else if (dataState.isEmpty()) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
-            CircularProgressIndicator(
-                modifier = Modifier
-                    .width(40.dp)
-                    .align(Alignment.Center),
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
     } else {
-        var forunCategoryId by viewModel.mainForumId
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .fillMaxSize()
-        ) {
-            var visible = remember { mutableStateOf(false) }
-            val scope = rememberCoroutineScope()
-//            AnimatedVisibility(
-//                visible = visible.value,
-//                enter = fadeIn() + slideInHorizontally(),
-//                exit = fadeOut() + slideOutHorizontally()
-//            ) {
-            PullToRefreshLazyColumn(
-                items = dataState!!,
-                lazyListState = lazyListState,
-                content = { item ->
-                    Forum_card(
-                        thread = item,
-                        imgClickAction = {
-                            val intent = Intent(context, ImageViewer::class.java)
-                            intent.putExtra("imgName", item.img + item.ext)
-                            context.startActivity(intent)
-                        },
-                        cardClickAction = {
-                            Log.d("外部单点", "${item}")
-                            val intent = Intent(context, ThreadAndReplyView::class.java)
-                            intent.putExtra("threadId", item.id.toString())
-                            intent.putExtra("hash", cookie?.cookie ?: "")
-                            if (viewModel.hasId(item.id)) {
-                                intent.putExtra("hasId", true)
-                            }
-                            context.startActivity(intent)
-                        },
-                        cardLongClickAction = {//下拉菜单选项判断操作
-                            Log.d("菜单点击", "${item}")
-                            when (it) {
-                                "收藏" -> (viewModel.insertFav(
-                                    Favorite(
-                                        item.id.toString(),
-                                        item.content,
-                                        img = item.img + item.ext
-                                    )
-                                ))
+        ShimmerCard(
+            isLoading = isRefreshing,
+            contentAfterLoading = {
+                var forunCategoryId by viewModel.mainForumId
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .fillMaxSize()
+                ) {
+                    var visible = remember { mutableStateOf(false) }
+                    val scope = rememberCoroutineScope()
+                    PullToRefreshLazyColumn(
+                        items = dataState!!,
+                        lazyListState = lazyListState,
+                        content = { item ->
+                            Forum_card(
+                                thread = item,
+                                imgClickAction = {
+                                    val intent = Intent(context, ImageViewer::class.java)
+                                    intent.putExtra("imgName", item.img + item.ext)
+                                    context.startActivity(intent)
+                                },
+                                cardClickAction = {
+                                    Log.d("外部单点", "${item}")
+                                    val intent = Intent(context, ThreadAndReplyView::class.java)
+                                    intent.putExtra("threadId", item.id.toString())
+                                    intent.putExtra("hash", cookie?.cookie ?: "")
+                                    if (viewModel.hasId(item.id)) {
+                                        intent.putExtra("hasId", true)
+                                    }
+                                    context.startActivity(intent)
+                                },
+                                cardLongClickAction = {//下拉菜单选项判断操作
+                                    Log.d("菜单点击", "${item}")
+                                    when (it) {
+                                        "收藏" -> (viewModel.insertFav(
+                                            Favorite(
+                                                item.id.toString(),
+                                                item.content,
+                                                img = item.img + item.ext
+                                            )
+                                        ))
 
-                                "屏蔽饼干" -> (Toast.makeText(
-                                    context,
-                                    "屏蔽饼干",
-                                    Toast.LENGTH_SHORT
-                                )
-                                    .show())
+                                        "屏蔽饼干" -> (Toast.makeText(
+                                            context,
+                                            "屏蔽饼干",
+                                            Toast.LENGTH_SHORT
+                                        )
+                                            .show())
 
-                                "订阅" -> (Toast.makeText(
-                                    context,
-                                    "订阅",
-                                    Toast.LENGTH_SHORT
-                                )
-                                    .show())
+                                        "订阅" -> (Toast.makeText(
+                                            context,
+                                            "订阅",
+                                            Toast.LENGTH_SHORT
+                                        )
+                                            .show())
+                                    }
+                                },
+                                stricted = true,
+                                forumId = item.fid.toString(),
+                                forumIdClickAction = {
+                                    scope.launch {
+                                        withContext(Dispatchers.Main) {
+                                            lazyListState.scrollToItem(0)
+                                        }
+                                    }
+                                    viewModel.changeForumId(item.fid.toString(), true)
+                                    viewModel.mainForumId.value = ""
+                                    viewModel.changeTitle(forumMap[item.fid.toString()]!!)
+                                },
+                                mainForumId = viewModel.forumId.value,
+                                forumCategoryId = forunCategoryId
+                            )
+                        },
+                        isRefreshing = isRefreshing,
+                        //refreshing method
+                        onRefresh = {
+                            scope.launch {
+                                withContext(Dispatchers.Main) {
+                                    lazyListState.scrollToItem(0)
+                                }
+                                withContext(Dispatchers.IO) {
+                                    viewModel.refreshData(true, lazyListState)
+                                }
                             }
                         },
-                        stricted = true,
-                        posterName = "",
-                        forumId = item.fid.toString(),
-                        forumIdClickAction = {
-                            viewModel.changeForumId(item.fid.toString(), true)
-                            viewModel.mainForumId.value = ""
-                            viewModel.changeTitle(forumMap[item.fid.toString()]!!)
-                        },
-                        mainForumId = viewModel.forumId.value,
-                        forumCategoryId = forunCategoryId
+                        contentPadding = padding,
+                        loadMore = { onComplete ->
+                            viewModel.loadMore(onComplete)
+                        }
                     )
-                },
-                isRefreshing = isRefreshing,
-                //refreshing method
-                onRefresh = {
-                    viewModel.refreshData(true, lazyListState)
-                },
-                contentPadding = padding,
-                loadMore = { onComplete ->
-                    viewModel.loadMore(onComplete)
                 }
-            )
-//            }
-//            if (viewModel.isChangeForumIdDialogVisible.value) {
-//                ForumCategoryDialog(forumCategory = forumCategories, viewModel = viewModel)
-//            }
-        }
+            },
+            modifier = Modifier.padding(padding)
+        )
     }
 }
 

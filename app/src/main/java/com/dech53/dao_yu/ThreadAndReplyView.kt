@@ -16,6 +16,7 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -52,6 +53,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -71,11 +73,13 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -112,10 +116,13 @@ import com.dech53.dao_yu.dao.CookieDatabase
 import com.dech53.dao_yu.dao.FavoriteDataBase
 import com.dech53.dao_yu.models.Favorite
 import com.dech53.dao_yu.static.Url
+import com.dech53.dao_yu.static.forumMap
+import com.dech53.dao_yu.static.forumNameMap
 import com.dech53.dao_yu.static.xDaoPhrases
 import com.dech53.dao_yu.ui.theme.Dao_yuTheme
 import com.dech53.dao_yu.viewmodels.ThreadInfoView_ViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 class ThreadAndReplyView : ComponentActivity() {
@@ -152,6 +159,34 @@ class ThreadAndReplyView : ComponentActivity() {
             Dao_yuTheme {
                 var showBottomSheet by remember { mutableStateOf(false) }
                 val lazyListState = rememberLazyListState()
+                val shouldLoadMore = remember {
+                    derivedStateOf {
+                        val layoutInfo = lazyListState.layoutInfo
+                        val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()
+                        val totalItems = layoutInfo.totalItemsCount
+
+                        lastVisibleItem?.index == totalItems - 1 && viewModel.pageId.value <= viewModel.maxPage.value
+                    }
+                }
+                val threadInfo by viewModel.threadInfo
+                var skipPage by remember { viewModel.skipPage }
+                val fid by viewModel.fid
+                var isLoading by viewModel.isLoadingBackward
+                var isLoadingMore by remember { mutableStateOf(false) }
+                val page = remember { mutableStateOf(1) }
+                LaunchedEffect(shouldLoadMore) {
+                    snapshotFlow { shouldLoadMore.value }
+                        .distinctUntilChanged()
+                        .collect {
+                            if (it) {
+                                page.value++
+                                isLoadingMore = true
+                                viewModel.loadMore("F", onComplete = {
+                                    isLoadingMore = false
+                                })
+                            }
+                        }
+                }
                 val context = LocalContext.current
                 val cookies by viewModel.cookieList.collectAsState()
                 var isChangePageVisible = remember { mutableStateOf(false) }
@@ -160,7 +195,26 @@ class ThreadAndReplyView : ComponentActivity() {
                         TopAppBar(
                             modifier = Modifier.shadow(elevation = 10.dp),
                             title = {
-                                Text(text = "No." + threadId)
+                                Column {
+                                    Text(
+                                        text = "No." + threadId,
+                                        fontSize = 22.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Row {
+                                        Text(
+                                            text = forumNameMap[fid] ?: "加载中...",
+                                            fontSize = 14.sp,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                        Spacer(modifier = Modifier.padding(4.dp))
+                                        Text(
+                                            text = "X岛·nmbxd.com",
+                                            fontSize = 14.sp,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
                             },
                             colors = TopAppBarDefaults.topAppBarColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceContainer,
@@ -412,6 +466,8 @@ class ThreadAndReplyView : ComponentActivity() {
                                                 onClick = {
                                                     if (!viewModel.textFieldValue.value.text.isEmpty() && !viewModel.hash.value.isEmpty()) {
                                                         viewModel.replyThread(
+                                                            name = "无名氏",
+                                                            title = "无标题",
                                                             content = viewModel.textFieldValue.value.text,
                                                             resto = threadId!!,
                                                             cookie = viewModel.hash.value,
@@ -487,7 +543,7 @@ class ThreadAndReplyView : ComponentActivity() {
                             .padding(innerPadding)
 
                     ) {
-                        val threadInfo by viewModel.threadInfo
+
                         val isRefreshing by remember { viewModel.isRefreshing }
                         var onError by remember { viewModel.onError }
                         val interactionSource = remember { MutableInteractionSource() }
@@ -550,7 +606,6 @@ class ThreadAndReplyView : ComponentActivity() {
 //                                )
                                 val poster = threadInfo!![0].user_hash
                                 val pullToRefreshState = rememberPullToRefreshState()
-                                var isLoadingMore by remember { mutableStateOf(false) }
                                 Box(
                                     contentAlignment = Alignment.TopCenter,
                                     modifier = Modifier
@@ -563,22 +618,19 @@ class ThreadAndReplyView : ComponentActivity() {
                                         modifier = Modifier.fillMaxSize()
                                     ) {
                                         itemsIndexed(threadInfo!!) { index, reply ->
-                                            val context = LocalContext.current
                                             if (reply.id != 9999999) {
                                                 TRCard(
                                                     posterName = poster,
                                                     item = reply,
-                                                    viewModel
+                                                    viewModel,
+                                                    modifier = Modifier.animateItem()
                                                 )
                                             } else {
                                                 Card(
                                                     shape = MaterialTheme.shapes.small,
                                                     border = BorderStroke(
-                                                        1.dp,
+                                                        0.5.dp,
                                                         MaterialTheme.colorScheme.primary
-                                                    ),
-                                                    elevation = CardDefaults.elevatedCardElevation(
-                                                        defaultElevation = 4.dp
                                                     ),
                                                     colors = CardDefaults.cardColors(
                                                         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -590,6 +642,8 @@ class ThreadAndReplyView : ComponentActivity() {
                                                             vertical = 8.dp
                                                         )
                                                         .fillMaxWidth()
+                                                        .animateItem()
+                                                        .animateContentSize()
                                                 ) {
                                                     Column(modifier = Modifier.padding(5.dp)) {
                                                         Row(
@@ -615,13 +669,29 @@ class ThreadAndReplyView : ComponentActivity() {
                                                     }
                                                 }
                                             }
-                                            //load more data when scroll to the bottom
-                                            LaunchedEffect(Unit) {
-                                                if (index == lazyListState.layoutInfo.totalItemsCount - 1 && viewModel.pageId.value <= viewModel.maxPage.value) {
-                                                    isLoadingMore = true
-                                                    viewModel.loadMore("F", onComplete = {
-                                                        isLoadingMore = false
-                                                    })
+                                            if (index == 0) {
+                                                Row(
+                                                    horizontalArrangement = Arrangement.Center,
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(vertical = 5.dp)
+                                                ) {
+                                                    if (skipPage > 1 && !isLoading) {
+                                                        TextButton(onClick = {
+                                                            viewModel.isLoadingBackward.value = true
+                                                            viewModel.loadMore("B")
+                                                        }) {
+                                                            Text("加载先前回复")
+                                                        }
+                                                    }
+                                                    if (isLoading) {
+                                                        CircularProgressIndicator(
+                                                            color = MaterialTheme.colorScheme.primary,
+                                                            modifier = Modifier.size(16.dp),
+                                                            strokeWidth = 1.5.dp
+                                                        )
+                                                    }
                                                 }
                                             }
                                         }
@@ -642,73 +712,103 @@ class ThreadAndReplyView : ComponentActivity() {
                             }
                         }
                     }
-                    val page = remember { mutableStateOf(1) }
+
                     if (isChangePageVisible.value) {
                         //切换页数
                         Dialog(onDismissRequest = {
                             isChangePageVisible.value = !isChangePageVisible.value
                         }) {
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(80.dp)
-                                    .width(400.dp),
-                                shape = RoundedCornerShape(16.dp),
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Row(
+                                Card(
                                     modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(horizontal = 16.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    IconButton(onClick = {
-                                        page.value =
-                                            (page.value - 1).coerceAtLeast(1)
-                                    }) {
-                                        Icon(
-                                            imageVector = ImageVector.vectorResource(id = R.drawable.baseline_arrow_back_ios_new_24),
-                                            contentDescription = "Previous Page"
-                                        )
-                                    }
+                                        .fillMaxWidth()
+                                        .height(80.dp)
+                                        .width(400.dp),
+                                    shape = RoundedCornerShape(16.dp),
 
-                                    OutlinedTextField(
-                                        value = page.value.toString(),
-                                        onValueChange = {
-                                            val newPage = it
-                                            if (newPage != "" && newPage > "0") {
-                                                page.value = newPage.toInt()
-                                            }
-                                        },
-                                        modifier = Modifier.width(100.dp),
-                                        textStyle = TextStyle(
-                                            fontSize = 16.sp,
-                                            textAlign = TextAlign.Center
-                                        ),
-                                        keyboardOptions = KeyboardOptions.Default.copy(
-                                            keyboardType = KeyboardType.Number,
-                                            imeAction = ImeAction.Done
-                                        ),
-                                        keyboardActions = KeyboardActions(onDone = {
-                                            viewModel.pageId.value = page.value
-                                            viewModel.loadMore("B", page.value)
-                                            isChangePageVisible.value = !isChangePageVisible.value
-                                        })
-                                    )
+                                    ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(horizontal = 16.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        IconButton(onClick = {
+                                            page.value = 1
+                                        }) {
+                                            Icon(
+                                                imageVector = ImageVector.vectorResource(id = R.drawable.baseline_keyboard_double_arrow_left_24),
+                                                contentDescription = "mini Page"
+                                            )
+                                        }
+                                        IconButton(onClick = {
+                                            page.value =
+                                                (page.value - 1).coerceAtLeast(1)
+                                        }) {
+                                            Icon(
+                                                imageVector = ImageVector.vectorResource(id = R.drawable.baseline_arrow_back_ios_new_24),
+                                                contentDescription = "Previous Page"
+                                            )
+                                        }
 
-                                    IconButton(onClick = {
-                                        if (page.value <= viewModel.maxPage.value)
-                                            page.value += 1
-                                    }) {
-                                        Icon(
-                                            imageVector = ImageVector.vectorResource(id = R.drawable.baseline_arrow_forward_ios_24),
-                                            contentDescription = "Next Page"
+                                        OutlinedTextField(
+                                            value = page.value.toString(),
+                                            onValueChange = {
+                                                val newPage = it
+                                                if (newPage != "" && newPage > "0") {
+                                                    page.value = newPage.toInt()
+                                                }
+                                            },
+                                            modifier = Modifier.width(100.dp),
+                                            textStyle = TextStyle(
+                                                fontSize = 16.sp,
+                                                textAlign = TextAlign.Center
+                                            ),
+                                            keyboardOptions = KeyboardOptions.Default.copy(
+                                                keyboardType = KeyboardType.Number,
+                                                imeAction = ImeAction.Done
+                                            ),
+                                            keyboardActions = KeyboardActions(onDone = {
+                                                viewModel.pageId.value = page.value
+                                                viewModel.loadMore("S")
+                                                isChangePageVisible.value =
+                                                    !isChangePageVisible.value
+                                            })
                                         )
+
+                                        IconButton(onClick = {
+                                            if (page.value < viewModel.maxPage.value)
+                                                page.value += 1
+                                        }) {
+                                            Icon(
+                                                imageVector = ImageVector.vectorResource(id = R.drawable.baseline_arrow_forward_ios_24),
+                                                contentDescription = "Next Page"
+                                            )
+                                        }
+                                        IconButton(onClick = {
+                                            page.value = viewModel.maxPage.value
+                                        }) {
+                                            Icon(
+                                                imageVector = ImageVector.vectorResource(id = R.drawable.baseline_keyboard_double_arrow_right_24),
+                                                contentDescription = "mini Page"
+                                            )
+                                        }
                                     }
+                                }
+                                Button(onClick = {
+                                    viewModel.pageId.value = page.value
+                                    viewModel.skipPage.value = page.value
+                                    viewModel.loadMore("S")
+                                    isChangePageVisible.value =
+                                        !isChangePageVisible.value
+                                }) {
+                                    Text("跳转")
                                 }
                             }
                         }
-
                     }
                 }
             }
