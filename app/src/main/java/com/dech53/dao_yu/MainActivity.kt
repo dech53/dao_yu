@@ -71,7 +71,8 @@ import androidx.navigation.compose.rememberNavController
 import com.dech53.dao_yu.component.ForumCategoryDialog
 import com.dech53.dao_yu.component.MainButtonItems
 import com.dech53.dao_yu.component.PullToRefreshLazyColumn
-import com.dech53.dao_yu.component.ShimmerCard
+import com.dech53.dao_yu.component.ShimmerList
+import com.dech53.dao_yu.component.SkeletonCard
 import com.dech53.dao_yu.dao.CookieDatabase
 import com.dech53.dao_yu.dao.FavoriteDataBase
 import com.dech53.dao_yu.models.Cookie
@@ -143,9 +144,17 @@ fun Main_Page(
     val dataState = viewModel.dataState
     val isRefreshing by remember { viewModel.isRefreshing }
     val interactionSource = remember { MutableInteractionSource() }
-    val lazyListState = rememberLazyListState()
+    val lazyListState = viewModel.mainPageListState
     val context = LocalContext.current
     val onError by remember { viewModel.onError }
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(Unit) {
+        scope.launch {
+            withContext(Dispatchers.Main){
+                lazyListState.scrollToItem(0)
+            }
+        }
+    }
 
 //    LaunchedEffect(Unit) {
 //        snapshotFlow { dataState.size }
@@ -178,12 +187,12 @@ fun Main_Page(
                     interactionSource = interactionSource,
                     indication = null
                 ) {
-                    viewModel.refreshData(false, lazyListState)
+                    viewModel.refreshData(false)
                 }
             )
         }
     } else {
-        ShimmerCard(
+        ShimmerList(
             isLoading = isRefreshing,
             contentAfterLoading = {
                 var forunCategoryId by viewModel.mainForumId
@@ -193,7 +202,7 @@ fun Main_Page(
                         .fillMaxSize()
                 ) {
                     var visible = remember { mutableStateOf(false) }
-                    val scope = rememberCoroutineScope()
+
                     PullToRefreshLazyColumn(
                         items = dataState!!,
                         lazyListState = lazyListState,
@@ -265,7 +274,7 @@ fun Main_Page(
                                     lazyListState.scrollToItem(0)
                                 }
                                 withContext(Dispatchers.IO) {
-                                    viewModel.refreshData(true, lazyListState)
+                                    viewModel.refreshData(true)
                                 }
                             }
                         },
@@ -275,6 +284,9 @@ fun Main_Page(
                         }
                     )
                 }
+            },
+            skeletonContent = {
+                SkeletonCard()
             },
             modifier = Modifier.padding(padding)
         )
@@ -332,6 +344,7 @@ fun Main_Screen(viewModel: MainPage_ViewModel, cookie: Cookie?) {
                         changeDrawerState = {
                             scope.launch(Dispatchers.IO) {
                                 drawerState.close()
+                                viewModel.mainPageListState.scrollToItem(0)
                             }
                         }
                     )

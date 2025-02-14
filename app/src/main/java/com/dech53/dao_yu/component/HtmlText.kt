@@ -56,7 +56,7 @@ fun HtmlTRText(
     fontSize: TextUnit = 15.sp,
     viewModel: ThreadInfoView_ViewModel,
     context: Context,
-    posterName: String
+    posterName: String,
 ) {
 
     //main regex match
@@ -82,7 +82,7 @@ fun HtmlTRText(
         result
     }
     //second regex match
-    Column(modifier = Modifier.animateContentSize()) {
+    Column(modifier = Modifier) {
         parts.forEach { (isMatch, text) ->
             if (isMatch) {
                 // 提取 id
@@ -137,7 +137,6 @@ fun HtmlTRText(
                             fontSize = 14.sp,
                             style = MaterialTheme.typography.labelSmall.copy(
                                 color = MaterialTheme.colorScheme.primary,
-                                background = MaterialTheme.colorScheme.surfaceContainerLow
                             ),
                         )
                         Spacer(modifier = Modifier.width(8.dp))

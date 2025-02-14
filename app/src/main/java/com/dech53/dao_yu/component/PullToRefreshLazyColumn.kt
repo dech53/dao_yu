@@ -85,11 +85,14 @@ fun PullToRefreshLazyColumn(
             }
             if (loadMoreState.value) {
                 item {
-                    ShimmerCard(
+                    ShimmerList(
                         isLoading = loadMoreState.value,
                         contentAfterLoading = {},
                         modifier = Modifier
                             .fillMaxSize(),
+                        skeletonContent = {
+                            SkeletonCard()
+                        },
                         amount = 1
                     )
                 }

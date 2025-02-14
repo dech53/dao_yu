@@ -20,7 +20,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -51,14 +54,11 @@ fun QuotedComponent(
         Box(
             modifier = Modifier
                 .padding(top = 10.dp)
+
         ) {
             Box(
-                modifier = Modifier
-                    .border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.primary,
-                        shape = MaterialTheme.shapes.extraSmall
-                    )
+                modifier = Modifier.clip(RoundedCornerShape(5.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(0.08f))
                     .padding(all = 5.dp)
             ) {
                 Column(
@@ -92,21 +92,23 @@ fun QuotedComponent(
                         context = context,
                         posterName = posterName
                     )
-                    AsyncImage(
-                        model = Url.IMG_THUMB_QA + quoteRef.img + quoteRef.ext,
-                        contentDescription = "",
-                        modifier = Modifier
-                            .width(100.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                            .clickable(
-                                indication = rememberRipple(bounded = true),
-                                interactionSource = remember { MutableInteractionSource() }
-                            ) {
-                                val intent = Intent(context, ImageViewer::class.java)
-                                intent.putExtra("imgName", quoteRef.img + quoteRef.ext)
-                                context.startActivity(intent)
-                            }
-                    )
+                    if (quoteRef.img != "") {
+                        AsyncImage(
+                            model = Url.IMG_THUMB_QA + quoteRef.img + quoteRef.ext,
+                            contentDescription = "",
+                            modifier = Modifier
+                                .width(100.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .clickable(
+                                    indication = rememberRipple(bounded = true),
+                                    interactionSource = remember { MutableInteractionSource() }
+                                ) {
+                                    val intent = Intent(context, ImageViewer::class.java)
+                                    intent.putExtra("imgName", quoteRef.img + quoteRef.ext)
+                                    context.startActivity(intent)
+                                }
+                        )
+                    }
                     if (quoteRef.isThread){
                         TextButton(onClick = {
                             val intent = Intent(context, ThreadAndReplyView::class.java)
@@ -125,13 +127,11 @@ fun QuotedComponent(
                 color = MaterialTheme.colorScheme.primary,
                 style = MaterialTheme.typography.labelSmall.copy(
                     color = MaterialTheme.colorScheme.primary,
-                    background = MaterialTheme.colorScheme.surfaceContainerLow
                 ),
                 fontSize = 14.sp,
                 modifier = Modifier
                     .padding(start = 12.dp)
                     .offset(y = (-9).dp)
-                    .background(MaterialTheme.colorScheme.surfaceContainerLow)
                     .padding(horizontal = 2.dp)
                     .clickable { isExpanded.value = !isExpanded.value }
             )
@@ -140,11 +140,10 @@ fun QuotedComponent(
         Text(
             text = ">>No." + quoteRef.id.toString(),
             fontSize = 14.sp,
-            style = MaterialTheme.typography.labelSmall.copy(
-                color = MaterialTheme.colorScheme.primary,
-                background = MaterialTheme.colorScheme.surfaceContainerLow
-            ),
-            modifier = Modifier.clickable {
+            color = MaterialTheme.colorScheme.primary,
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier
+                .clickable {
                 isExpanded.value = !isExpanded.value
             }
         )

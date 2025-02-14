@@ -111,6 +111,8 @@ import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import com.dech53.dao_yu.component.CustomExposedDropMenu
 import com.dech53.dao_yu.component.HtmlTRText
+import com.dech53.dao_yu.component.ShimmerList
+import com.dech53.dao_yu.component.SkeletonCard
 import com.dech53.dao_yu.component.TRCard
 import com.dech53.dao_yu.dao.CookieDatabase
 import com.dech53.dao_yu.dao.FavoriteDataBase
@@ -120,10 +122,14 @@ import com.dech53.dao_yu.static.forumMap
 import com.dech53.dao_yu.static.forumNameMap
 import com.dech53.dao_yu.static.xDaoPhrases
 import com.dech53.dao_yu.ui.theme.Dao_yuTheme
+import com.dech53.dao_yu.ui.theme.capsuleShape
+import com.dech53.dao_yu.ui.theme.shimmerEffect
 import com.dech53.dao_yu.viewmodels.ThreadInfoView_ViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class ThreadAndReplyView : ComponentActivity() {
     val favDbDao by lazy {
@@ -168,6 +174,7 @@ class ThreadAndReplyView : ComponentActivity() {
                         lastVisibleItem?.index == totalItems - 1 && viewModel.pageId.value <= viewModel.maxPage.value
                     }
                 }
+                val scope = rememberCoroutineScope()
                 val threadInfo by viewModel.threadInfo
                 var skipPage by remember { viewModel.skipPage }
                 val fid by viewModel.fid
@@ -201,12 +208,28 @@ class ThreadAndReplyView : ComponentActivity() {
                                         fontSize = 22.sp,
                                         fontWeight = FontWeight.Bold
                                     )
-                                    Row {
-                                        Text(
-                                            text = forumNameMap[fid] ?: "加载中...",
-                                            fontSize = 14.sp,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
+                                    Row (
+                                        horizontalArrangement = Arrangement.Start,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ){
+                                        if (forumNameMap[fid] == null) {
+                                                Text(
+                                                    text = "",
+                                                    fontSize = 14.sp,
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier
+                                                        .height(18.dp)
+                                                        .width(50.dp)
+                                                        .clip(capsuleShape)
+                                                        .shimmerEffect()
+                                                )
+                                        } else {
+                                            Text(
+                                                text = forumNameMap[fid] ?: "加载中...",
+                                                fontSize = 14.sp,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
                                         Spacer(modifier = Modifier.padding(4.dp))
                                         Text(
                                             text = "X岛·nmbxd.com",
@@ -588,127 +611,124 @@ class ThreadAndReplyView : ComponentActivity() {
                                         }
                                     )
                                 }
-                            } else if (threadInfo == null) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier
-                                        .width(40.dp)
-                                        .align(Alignment.Center),
-                                    color = MaterialTheme.colorScheme.primary
-                                )
                             } else {
-//                                TRCard(
-//                                    item = threadInfo!!,
-//                                    lazyListState = rememberLazyListState(),
-//                                    loadMore = {
-//                                        viewModel.loadMore()
-//                                    },
-//                                    viewModel
-//                                )
-                                val poster = threadInfo!![0].user_hash
-                                val pullToRefreshState = rememberPullToRefreshState()
-                                Box(
-                                    contentAlignment = Alignment.TopCenter,
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .nestedScroll(pullToRefreshState.nestedScrollConnection)
+                                ShimmerList(
+                                    isLoading = threadInfo == null,
+                                    contentAfterLoading = {
+                                        val poster = threadInfo!![0].user_hash
+                                        val pullToRefreshState = rememberPullToRefreshState()
+                                        Box(
+                                            contentAlignment = Alignment.TopCenter,
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .nestedScroll(pullToRefreshState.nestedScrollConnection)
 
-                                ) {
-                                    LazyColumn(
-                                        state = lazyListState,
-                                        modifier = Modifier.fillMaxSize()
-                                    ) {
-                                        itemsIndexed(threadInfo!!) { index, reply ->
-                                            if (reply.id != 9999999) {
-                                                TRCard(
-                                                    posterName = poster,
-                                                    item = reply,
-                                                    viewModel,
-                                                    modifier = Modifier.animateItem()
-                                                )
-                                            } else {
-                                                Card(
-                                                    shape = MaterialTheme.shapes.small,
-                                                    border = BorderStroke(
-                                                        0.5.dp,
-                                                        MaterialTheme.colorScheme.primary
-                                                    ),
-                                                    colors = CardDefaults.cardColors(
-                                                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                                                        contentColor = MaterialTheme.colorScheme.onSurface
-                                                    ),
-                                                    modifier = Modifier
-                                                        .padding(
-                                                            horizontal = 13.dp,
-                                                            vertical = 8.dp
+                                        ) {
+                                            LazyColumn(
+                                                state = lazyListState,
+                                                modifier = Modifier.fillMaxSize()
+                                            ) {
+                                                itemsIndexed(threadInfo!!) { index, reply ->
+                                                    if (reply.id != 9999999) {
+                                                        TRCard(
+                                                            posterName = poster,
+                                                            item = reply,
+                                                            viewModel,
+                                                            modifier = Modifier.animateItem()
                                                         )
-                                                        .fillMaxWidth()
-                                                        .animateItem()
-                                                        .animateContentSize()
-                                                ) {
-                                                    Column(modifier = Modifier.padding(5.dp)) {
-                                                        Row(
-                                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                                            modifier = Modifier.fillMaxWidth()
+                                                    } else {
+                                                        Card(
+                                                            colors = CardDefaults.cardColors(
+                                                                containerColor = MaterialTheme.colorScheme.primary.copy(
+                                                                    alpha = 0.1f
+                                                                ),
+                                                            ),
+                                                            modifier = Modifier
+                                                                .clip(RoundedCornerShape(22.dp))
+                                                                .padding(
+                                                                    horizontal = 13.dp,
+                                                                    vertical = 8.dp
+                                                                )
+                                                                .fillMaxWidth()
+                                                                .animateItem()
+                                                                .animateContentSize()
                                                         ) {
-                                                            Row {
-                                                                Text(
-                                                                    text = reply.user_hash,
-                                                                    fontWeight = FontWeight.Bold,
-                                                                    fontSize = 17.sp,
-                                                                    color = MaterialTheme.colorScheme.primary
+                                                            Column(modifier = Modifier.padding(5.dp)) {
+                                                                Row(
+                                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                                    modifier = Modifier.fillMaxWidth()
+                                                                ) {
+                                                                    Row {
+                                                                        Text(
+                                                                            text = reply.user_hash,
+                                                                            fontWeight = FontWeight.Bold,
+                                                                            fontSize = 17.sp,
+                                                                            color = MaterialTheme.colorScheme.primary
+                                                                        )
+                                                                    }
+                                                                }
+                                                                HtmlTRText(
+                                                                    htmlContent = reply.content,
+                                                                    maxLines = Int.MAX_VALUE,
+                                                                    viewModel = viewModel,
+                                                                    context = context,
+                                                                    posterName = poster,
                                                                 )
                                                             }
                                                         }
-                                                        HtmlTRText(
-                                                            htmlContent = reply.content,
-                                                            maxLines = Int.MAX_VALUE,
-                                                            viewModel = viewModel,
-                                                            context = context,
-                                                            posterName = poster
-                                                        )
                                                     }
-                                                }
-                                            }
-                                            if (index == 0) {
-                                                Row(
-                                                    horizontalArrangement = Arrangement.Center,
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .padding(vertical = 5.dp)
-                                                ) {
-                                                    if (skipPage > 1 && !isLoading) {
-                                                        TextButton(onClick = {
-                                                            viewModel.isLoadingBackward.value = true
-                                                            viewModel.loadMore("B")
-                                                        }) {
-                                                            Text("加载先前回复")
+                                                    if (index == 0) {
+                                                        Row(
+                                                            horizontalArrangement = Arrangement.Center,
+                                                            verticalAlignment = Alignment.CenterVertically,
+                                                            modifier = Modifier
+                                                                .fillMaxWidth()
+                                                                .padding(vertical = 5.dp)
+                                                        ) {
+                                                            if (skipPage>1 && !isLoading) {
+                                                                TextButton(onClick = {
+                                                                    viewModel.isLoadingBackward.value = true
+                                                                    viewModel.loadMore("B")
+                                                                }) {
+                                                                    Text("加载先前回复")
+                                                                }
+                                                            }
+                                                            if (isLoading) {
+                                                                ShimmerList(
+                                                                    isLoading = isLoading,
+                                                                    contentAfterLoading = {},
+                                                                    skeletonContent = {
+                                                                        SkeletonCard()
+                                                                    },
+                                                                    modifier = Modifier,
+                                                                    amount = 2
+                                                                )
+                                                            }
                                                         }
+
                                                     }
-                                                    if (isLoading) {
-                                                        CircularProgressIndicator(
-                                                            color = MaterialTheme.colorScheme.primary,
-                                                            modifier = Modifier.size(16.dp),
-                                                            strokeWidth = 1.5.dp
+                                                }
+                                                if (isLoadingMore) {
+                                                    item {
+                                                        ShimmerList(
+                                                            isLoading = isLoadingMore,
+                                                            contentAfterLoading = {},
+                                                            skeletonContent = {
+                                                                SkeletonCard()
+                                                            },
+                                                            modifier = Modifier,
+                                                            amount = 1
                                                         )
                                                     }
                                                 }
                                             }
                                         }
-                                        if (isLoadingMore) {
-                                            item {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .padding(16.dp),
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    CircularProgressIndicator()
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
+                                    },
+                                    skeletonContent = {
+                                        SkeletonCard()
+                                    },
+                                    modifier = Modifier,
+                                )
                             }
                         }
                     }
@@ -799,6 +819,11 @@ class ThreadAndReplyView : ComponentActivity() {
                                     }
                                 }
                                 Button(onClick = {
+                                    scope.launch {
+                                        withContext(Dispatchers.Main){
+                                            lazyListState.scrollToItem(0)
+                                        }
+                                    }
                                     viewModel.pageId.value = page.value
                                     viewModel.skipPage.value = page.value
                                     viewModel.loadMore("S")

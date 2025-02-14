@@ -121,11 +121,13 @@ class MainPage_ViewModel(private val cookieDao: CookieDao, private val favDao: F
         }
     }
 
+    val mainPageListState = LazyListState()
+
 
     var isInitialLoad = mutableStateOf(true)
 
     // refresh data
-    fun refreshData(showIcon: Boolean, lazyListState: LazyListState?) {
+    fun refreshData(showIcon: Boolean) {
         viewModelScope.launch {
             try {
                 if (showIcon) {
@@ -160,7 +162,7 @@ class MainPage_ViewModel(private val cookieDao: CookieDao, private val favDao: F
         else isThread.value = false
         if (forumId.value != id || forumId.value in setOf("2", "3")) {
             forumId.value = id
-            refreshData(showIcon, null)
+            refreshData(showIcon)
         }
     }
 

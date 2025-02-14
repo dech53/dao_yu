@@ -102,16 +102,12 @@ fun TRCard(
             )
         }
     Card(
-        shape = MaterialTheme.shapes.small,
-        border = BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.primary
-        ),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
             contentColor = MaterialTheme.colorScheme.onSurface
         ),
         modifier = Modifier
+            .clip(RoundedCornerShape(22.dp))
             .padding(
                 horizontal = 13.dp,
                 vertical = 8.dp
@@ -221,7 +217,7 @@ fun TRCard(
                 maxLines = Int.MAX_VALUE,
                 viewModel = viewModel,
                 context = context,
-                posterName = posterName
+                posterName = posterName,
             )
             if (item.img != "") {
                 AsyncImage(

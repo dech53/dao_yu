@@ -114,10 +114,10 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val fav
     var hash = mutableStateOf("")
 
     fun refreshData() {
+        isRefreshing.value = true
         viewModelScope.launch {
             try {
                 onError.value = false
-                isRefreshing.value = true
                 resetPageId()
                 val newData = withContext(Dispatchers.IO) {
                     Http_request.getThreadInfo("thread?id=${threadId.value}", hash.value)
@@ -130,10 +130,11 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val fav
                 newData.toReplies().map { it.toQuoteRef() }
                     .forEach { quoteRef -> contentContext[quoteRef.id.toString()] = quoteRef }
                 fid.value = _threadInfo.value!!.get(0).fid!!.toString()
-                isRefreshing.value = false
+
             } catch (e: Exception) {
                 onError.value = true
             }
+            isRefreshing.value = false
         }
     }
 

@@ -104,14 +104,12 @@ fun Forum_card(
     var itemWidth by remember { mutableStateOf(0.dp) }
 
     Card(
-        shape = MaterialTheme.shapes.small,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
             contentColor = MaterialTheme.colorScheme.onSurface
         ),
         modifier = Modifier
+            .clip(RoundedCornerShape(22.dp))
             .padding(horizontal = 13.dp, vertical = 8.dp)
             .fillMaxWidth()
             .pointerInput(true) {
