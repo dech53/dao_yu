@@ -1,8 +1,11 @@
 package com.dech53.dao_yu.component
 
+import android.graphics.drawable.BitmapDrawable
 import android.os.Build.VERSION.SDK_INT
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -10,21 +13,28 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,23 +53,35 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.DpOffset
 import coil3.ImageLoader
 import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
+import coil3.compose.SubcomposeAsyncImage
+import coil3.compose.rememberAsyncImagePainter
 import coil3.disk.DiskCache
+import coil3.disk.directory
 import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import coil3.memory.MemoryCache
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
+import coil3.request.SuccessResult
 import coil3.request.crossfade
+import coil3.size.Dimension
+import coil3.size.Size
+import coil3.toBitmap
 import com.dech53.dao_yu.R
+import com.dech53.dao_yu.component.button.CircleButton
 import com.dech53.dao_yu.static.Url
 import com.dech53.dao_yu.static.dropDownItemsList
 import com.dech53.dao_yu.static.forumMap
+import com.dech53.dao_yu.ui.theme.shimmerEffect
 
 @Composable
 fun Forum_card(
@@ -80,29 +102,52 @@ fun Forum_card(
             replace_.replace(dateRegex.find(thread.now)!!.value, "/")
         )
     }
+
+    val time_ by remember(thread.now) {
+        mutableStateOf(
+            Regex("""\d{2}:\d{2}:\d{2}$""").find(thread.now)!!.value,
+        )
+    }
+
+    val density = LocalDensity.current
+    var imageHeight by rememberSaveable { mutableStateOf(200)}
+    var imageWidth by rememberSaveable { mutableStateOf(200)}
     val context = LocalContext.current
+    val request = remember {
+        ImageRequest.Builder(context)
+            .data(Url.IMG_THUMB_QA + thread.img + thread.ext)
+            .memoryCachePolicy(CachePolicy.ENABLED)
+            .diskCachePolicy(CachePolicy.ENABLED)
+            .build()
+    }
     val imageLoader = remember {
         ImageLoader.Builder(context)
             .memoryCache {
                 MemoryCache.Builder()
-                    .maxSizePercent(context,0.25)
+                    .maxSizePercent(context, 0.25)
+                    .build()
+            }
+            .diskCache {
+                DiskCache.Builder()
+                    .directory(context.cacheDir.resolve("image_cache"))
+                    .maxSizePercent(0.2)
                     .build()
             }
             .crossfade(true)
             .build()
     }
-    val imageModifier = Modifier
-        .size(100.dp)
-        .clip(RoundedCornerShape(4.dp))
-        .clickable(
-            indication = rememberRipple(bounded = true),
-            interactionSource = remember { MutableInteractionSource() }
-        ) { imgClickAction() }
+
+    LaunchedEffect(Unit) {
+        if (thread.img!="") {
+            val bitmap = imageLoader.execute(request).image!!.toBitmap()
+            imageWidth = bitmap.width
+            imageHeight = bitmap.height
+        }
+    }
+
     var isContextVisible by rememberSaveable { mutableStateOf(false) }
-    var pressOffset by remember { mutableStateOf(DpOffset.Zero) }
     var itemHeight by remember { mutableStateOf(0.dp) }
     var itemWidth by remember { mutableStateOf(0.dp) }
-
     Card(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
@@ -112,6 +157,9 @@ fun Forum_card(
             .clip(RoundedCornerShape(22.dp))
             .padding(horizontal = 13.dp, vertical = 8.dp)
             .fillMaxWidth()
+            .onGloballyPositioned { layoutCoordinates ->
+                itemHeight = with(density) { layoutCoordinates.size.height.toDp() }
+            }
             .pointerInput(true) {
                 detectTapGestures(
                     onTap = {
@@ -130,18 +178,35 @@ fun Forum_card(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth()
             ) {
+                Text(
+                    text = thread.user_hash,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    color = if (thread.user_hash == "Admin") Color.Red else MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = "No.${thread.id}",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.tertiary
+                )
+            }
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = calculatedDate,
                         fontWeight = FontWeight.W500,
-                        fontSize = 12.sp,
+                        fontSize = 13.sp,
                         letterSpacing = 0.5.sp
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = thread.user_hash,
+                        text = time_,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp,
+                        fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.tertiary
                     )
                 }
@@ -199,26 +264,31 @@ fun Forum_card(
 
             CommonHtmlText(
                 htmlContent = thread.content,
-                maxLines = if (stricted) 6 else Int.MAX_VALUE
+                maxLines = if (stricted) 10 else Int.MAX_VALUE
             )
 
             if (thread.img != "") {
                 Spacer(modifier = Modifier.height(10.dp))
-                val imageRequest = rememberUpdatedState(
-                    Url.IMG_THUMB_QA + thread.img + thread.ext
-                )
-                AsyncImage(
+                SubcomposeAsyncImage(
                     imageLoader = imageLoader,
-                    model = ImageRequest.Builder(context)
-                        .data(imageRequest.value)
-                        .crossfade(true)
-                        .memoryCachePolicy(CachePolicy.ENABLED)
-                        .diskCachePolicy(CachePolicy.ENABLED)
-                        .build(),
-                    contentDescription = "img from usr ${thread.user_hash}",
-                    modifier = imageModifier,
-                    placeholder = painterResource(id = R.drawable.apple_touch_icon),
-                    contentScale = ContentScale.Crop
+                    model = request,
+                    contentDescription = null,
+                    loading = {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(0.5f)
+                                .height(250.dp)
+                                .shimmerEffect()
+                        ) {
+                        }
+                    },
+                    modifier = Modifier
+                        .size(width = imageWidth.dp, height = imageHeight.dp)
+                        .clickable {
+                            imgClickAction()
+                        },
+                    contentScale = ContentScale.Fit,
+                    alignment = Alignment.CenterStart
                 )
             }
             if ((mainForumId in listOf("1", "2", "3")) && forumCategoryId == "999") {
@@ -227,7 +297,11 @@ fun Forum_card(
                     modifier = Modifier
                         .padding(top = 8.dp)
                         .clip(RoundedCornerShape(6.dp))
-                        .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(6.dp))
+                        .border(
+                            1.dp,
+                            MaterialTheme.colorScheme.primary,
+                            RoundedCornerShape(6.dp)
+                        )
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                         .clickable {
                             forumIdClickAction()
@@ -241,13 +315,39 @@ fun Forum_card(
                     )
                 }
             }
+            Spacer(modifier = Modifier.height(15.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Row {
+                    CircleButton(
+                        size = 40.dp,
+                        onClick = {
+                            isContextVisible = true
+                        },
+                        backGroundColor = MaterialTheme.colorScheme.primary.copy(0.3f),
+                        imageVector = ImageVector.vectorResource(R.drawable.baseline_more_vert_24)
+                    )
+                }
+                Row {
+                    CircleButton(
+                        size = 40.dp,
+                        onClick = {
+                            isContextVisible = true
+                        },
+                        backGroundColor = MaterialTheme.colorScheme.primary.copy(0.3f),
+                        imageVector = ImageVector.vectorResource(R.drawable.baseline_more_vert_24)
+                    )
+                }
+            }
         }
         DropdownMenu(
             expanded = isContextVisible,
             onDismissRequest = { isContextVisible = false },
-            offset = pressOffset.copy(
+            offset = DpOffset(
                 x = itemWidth,
-                y = pressOffset.y - itemHeight,
+                y = itemHeight
             )
         ) {
             dropDownItemsList.forEach { item ->

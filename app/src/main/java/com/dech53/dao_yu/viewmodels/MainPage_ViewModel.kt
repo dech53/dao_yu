@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -94,6 +95,11 @@ class MainPage_ViewModel(private val cookieDao: CookieDao, private val favDao: F
 //        getAllFav()
         isThread.value = mainForumId.value == "999"
     }
+
+
+    var imgList = mutableStateMapOf<String,preLoadImage>()
+
+    var isRaw = mutableStateOf(false)
 
     // initial request
     fun loadData() {

@@ -153,7 +153,6 @@ class ThreadAndReplyView : ComponentActivity() {
         Log.d("TRA", "进程销毁")
     }
 
-    @OptIn(ExperimentalFoundationApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -174,6 +173,7 @@ class ThreadAndReplyView : ComponentActivity() {
                         lastVisibleItem?.index == totalItems - 1 && viewModel.pageId.value <= viewModel.maxPage.value
                     }
                 }
+
                 val scope = rememberCoroutineScope()
                 val threadInfo by viewModel.threadInfo
                 var skipPage by remember { viewModel.skipPage }
@@ -266,6 +266,14 @@ class ThreadAndReplyView : ComponentActivity() {
                                     Icon(
                                         imageVector = ImageVector.vectorResource(id = R.drawable.baseline_collections_24),
                                         contentDescription = "generate photo"
+                                    )
+                                }
+                                IconButton(onClick = {
+                                    viewModel.isRaw.value= !viewModel.isRaw.value
+                                }) {
+                                    Icon(
+                                        imageVector = ImageVector.vectorResource(id = if(viewModel.isRaw.value) R.drawable.baseline_raw_on_24 else R.drawable.baseline_raw_off_24),
+                                        contentDescription = "原始图缩略图切换"
                                     )
                                 }
                             }
@@ -634,7 +642,8 @@ class ThreadAndReplyView : ComponentActivity() {
                                                             posterName = poster,
                                                             item = reply,
                                                             viewModel,
-                                                            modifier = Modifier.animateItem()
+                                                            modifier = Modifier.animateItem(),
+                                                            isRaw = viewModel.isRaw.value
                                                         )
                                                     } else {
                                                         Card(
@@ -705,7 +714,6 @@ class ThreadAndReplyView : ComponentActivity() {
                                                                 )
                                                             }
                                                         }
-
                                                     }
                                                 }
                                                 if (isLoadingMore) {

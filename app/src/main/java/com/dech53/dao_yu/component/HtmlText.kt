@@ -61,7 +61,7 @@ fun HtmlTRText(
 
     //main regex match
     val mainRegex = Regex(
-        "(<font color=\"#789922\">&gt;&gt;(No.)?(\\d+)</font>)(<br\\s*/?>)?(\\r|\\n)?"
+        "(<font color=\"#789922\">&gt;&gt;(No.)?(\\d+)</font>)(<br\\s*/?>)?([\\r\\n])?"
     )
     val interactionSource = remember { MutableInteractionSource() }
     val parts = remember(htmlContent) {

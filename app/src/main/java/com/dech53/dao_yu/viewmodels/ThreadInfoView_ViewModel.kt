@@ -107,7 +107,7 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val fav
     var maxPage = mutableStateOf(0)
 
     var skipPage = mutableStateOf(1)
-
+    var isRaw = mutableStateOf(false)
 
     var contentContext = mutableStateMapOf<String, QuoteRef>()
 

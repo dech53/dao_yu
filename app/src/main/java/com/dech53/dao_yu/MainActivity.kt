@@ -77,6 +77,8 @@ import com.dech53.dao_yu.dao.CookieDatabase
 import com.dech53.dao_yu.dao.FavoriteDataBase
 import com.dech53.dao_yu.models.Cookie
 import com.dech53.dao_yu.models.Favorite
+import com.dech53.dao_yu.models.preLoadImage
+import com.dech53.dao_yu.static.Url
 import com.dech53.dao_yu.static.forumCategories
 import com.dech53.dao_yu.static.forumMap
 import com.dech53.dao_yu.static.forumNameMap
@@ -150,7 +152,7 @@ fun Main_Page(
     val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) {
         scope.launch {
-            withContext(Dispatchers.Main){
+            withContext(Dispatchers.Main) {
                 lazyListState.scrollToItem(0)
             }
         }
@@ -263,7 +265,7 @@ fun Main_Page(
                                     viewModel.changeTitle(forumMap[item.fid.toString()]!!)
                                 },
                                 mainForumId = viewModel.forumId.value,
-                                forumCategoryId = forunCategoryId
+                                forumCategoryId = forunCategoryId,
                             )
                         },
                         isRefreshing = isRefreshing,
@@ -393,6 +395,16 @@ fun Main_Screen(viewModel: MainPage_ViewModel, cookie: Cookie?) {
                                     contentDescription = "Back",
                                 )
                             }
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = {
+                            viewModel.isRaw.value = !viewModel.isRaw.value
+                        }) {
+                            Icon(
+                                imageVector = ImageVector.vectorResource(id = if (viewModel.isRaw.value) R.drawable.baseline_raw_on_24 else R.drawable.baseline_raw_off_24),
+                                contentDescription = "原始图缩略图切换"
+                            )
                         }
                     }
                 )

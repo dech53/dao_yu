@@ -2,6 +2,8 @@
 
 package com.dech53.dao_yu.component
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalOverscrollConfiguration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -30,7 +32,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun PullToRefreshLazyColumn(
     items: List<Thread>,
@@ -71,30 +73,35 @@ fun PullToRefreshLazyColumn(
             .nestedScroll(pullToRefreshState.nestedScrollConnection)
             .padding(contentPadding)
     ) {
-        LazyColumn(
-            state = lazyListState,
-            modifier = Modifier.fillMaxSize()
+        CompositionLocalProvider(
+            LocalOverscrollConfiguration provides null
         ) {
-            itemsIndexed(
-                items = items,
-                key = { index, item -> "${item.id}${index}" }
-            ) { index, item ->
-                key("${item.id}${index}") {
-                    content(item)
+            LazyColumn(
+                state = lazyListState,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                itemsIndexed(
+                    items = items,
+                    key = { index, item -> "${item.id}${index}" }
+                ) { index, item ->
+                    key("${item.id}${index}") {
+
+                        content(item)
+                    }
                 }
-            }
-            if (loadMoreState.value) {
-                item {
-                    ShimmerList(
-                        isLoading = loadMoreState.value,
-                        contentAfterLoading = {},
-                        modifier = Modifier
-                            .fillMaxSize(),
-                        skeletonContent = {
-                            SkeletonCard()
-                        },
-                        amount = 1
-                    )
+                if (loadMoreState.value) {
+                    item {
+                        ShimmerList(
+                            isLoading = loadMoreState.value,
+                            contentAfterLoading = {},
+                            modifier = Modifier
+                                .fillMaxSize(),
+                            skeletonContent = {
+                                SkeletonCard()
+                            },
+                            amount = 1
+                        )
+                    }
                 }
             }
         }
