@@ -96,11 +96,7 @@ class MainPage_ViewModel(private val cookieDao: CookieDao, private val favDao: F
         isThread.value = mainForumId.value == "999"
     }
 
-
     var imgList = mutableStateMapOf<String,preLoadImage>()
-
-    var isRaw = mutableStateOf(false)
-
     // initial request
     fun loadData() {
         isRefreshing.value = true

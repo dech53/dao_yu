@@ -1,40 +1,29 @@
 package com.dech53.dao_yu.component
 
-import android.graphics.drawable.BitmapDrawable
-import android.os.Build.VERSION.SDK_INT
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -56,32 +45,25 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.DpOffset
 import coil3.ImageLoader
-import coil3.compose.AsyncImage
-import coil3.compose.AsyncImagePainter
 import coil3.compose.SubcomposeAsyncImage
-import coil3.compose.rememberAsyncImagePainter
 import coil3.disk.DiskCache
 import coil3.disk.directory
-import coil3.gif.AnimatedImageDecoder
-import coil3.gif.GifDecoder
 import coil3.memory.MemoryCache
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
-import coil3.request.SuccessResult
 import coil3.request.crossfade
-import coil3.size.Dimension
-import coil3.size.Size
 import coil3.toBitmap
 import com.dech53.dao_yu.R
 import com.dech53.dao_yu.component.button.CircleButton
+import com.dech53.dao_yu.models.preLoadImage
 import com.dech53.dao_yu.static.Url
 import com.dech53.dao_yu.static.dropDownItemsList
 import com.dech53.dao_yu.static.forumMap
 import com.dech53.dao_yu.ui.theme.shimmerEffect
+import com.dech53.dao_yu.viewmodels.MainPage_ViewModel
 
 @Composable
 fun Forum_card(
@@ -93,8 +75,13 @@ fun Forum_card(
     mainForumId: String,
     forumId: String,
     forumIdClickAction: () -> Unit,
-    forumCategoryId: String
+    forumCategoryId: String,
+    isFavored: Boolean,
+    favClickAction: (Boolean) -> Unit,
+    viewModel: MainPage_ViewModel
 ) {
+    var isFaved = remember { mutableStateOf(isFavored) }
+
     val dateRegex = Regex(pattern = "[^(]*|(?<=\\))[^)]*")
     val replace_ = Regex(pattern = "-")
     val calculatedDate by remember(thread.now) {
@@ -110,8 +97,11 @@ fun Forum_card(
     }
 
     val density = LocalDensity.current
-    var imageHeight by rememberSaveable { mutableStateOf(200)}
-    var imageWidth by rememberSaveable { mutableStateOf(200)}
+    val key = Url.IMG_THUMB_QA + thread.img + thread.ext
+    val imageInfo = viewModel.imgList[key]
+    var imageWidth = imageInfo?.width ?: 200
+    var imageHeight = imageInfo?.height ?: 200
+
     val context = LocalContext.current
     val request = remember {
         ImageRequest.Builder(context)
@@ -138,11 +128,16 @@ fun Forum_card(
     }
 
     LaunchedEffect(Unit) {
-        if (thread.img!="") {
-            val bitmap = imageLoader.execute(request).image!!.toBitmap()
-            imageWidth = bitmap.width
-            imageHeight = bitmap.height
+        if (thread.img != "") {
+            if (!viewModel.imgList.containsKey(Url.IMG_THUMB_QA + thread.img + thread.ext)) {
+                val bitmap = imageLoader.execute(request).image!!.toBitmap()
+                imageWidth = bitmap.width
+                imageHeight = bitmap.height
+                viewModel.imgList[Url.IMG_THUMB_QA + thread.img + thread.ext] =
+                    preLoadImage(height = bitmap.height, width = bitmap.width)
+            }
         }
+        Log.d("TRA", "wh fetched")
     }
 
     var isContextVisible by rememberSaveable { mutableStateOf(false) }
@@ -210,26 +205,6 @@ fun Forum_card(
                         color = MaterialTheme.colorScheme.tertiary
                     )
                 }
-
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (stricted) {
-                        Icon(
-                            imageVector = ImageVector.vectorResource(id = R.drawable.baseline_message_24),
-                            contentDescription = "messageIcon",
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = thread.ReplyCount.toString(),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp
-                        )
-                    }
-                }
             }
             if (thread.sage == 1) {
                 Spacer(modifier = Modifier.height(4.dp))
@@ -277,7 +252,7 @@ fun Forum_card(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth(0.5f)
-                                .height(250.dp)
+                                .height(imageHeight.dp)
                                 .shimmerEffect()
                         ) {
                         }
@@ -329,16 +304,46 @@ fun Forum_card(
                         backGroundColor = MaterialTheme.colorScheme.primary.copy(0.3f),
                         imageVector = ImageVector.vectorResource(R.drawable.baseline_more_vert_24)
                     )
-                }
-                Row {
+                    Spacer(modifier = Modifier.width(6.dp))
                     CircleButton(
                         size = 40.dp,
                         onClick = {
-                            isContextVisible = true
+                            favClickAction(isFaved.value)
+                            isFaved.value = !isFaved.value
                         },
                         backGroundColor = MaterialTheme.colorScheme.primary.copy(0.3f),
-                        imageVector = ImageVector.vectorResource(R.drawable.baseline_more_vert_24)
+                        imageVector = ImageVector.vectorResource(if (isFaved.value) R.drawable.baseline_favorite_24 else R.drawable.outline_favorite_border_24)
                     )
+                }
+                Row {
+                    BadgedBox(
+                        badge = {
+                            if (thread.ReplyCount > 0) {
+                                Badge(
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                    contentColor = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.align(Alignment.TopEnd)
+                                ) {
+                                    Text(text = thread.ReplyCount.toString())
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .background(MaterialTheme.colorScheme.primary.copy(0.0f))
+                    ) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary.copy(0.3f))
+                        ) {
+                            Icon(
+                                imageVector = ImageVector.vectorResource(id = R.drawable.baseline_message_24),
+                                contentDescription = "message count"
+                            )
+                        }
+                    }
                 }
             }
         }

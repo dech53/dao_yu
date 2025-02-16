@@ -8,12 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -25,7 +20,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -125,6 +119,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        viewModel.imgList.clear()
         scope.cancel()
     }
 
@@ -226,17 +221,9 @@ fun Main_Page(
                                     }
                                     context.startActivity(intent)
                                 },
-                                cardLongClickAction = {//下拉菜单选项判断操作
+                                cardLongClickAction = {
                                     Log.d("菜单点击", "${item}")
                                     when (it) {
-                                        "收藏" -> (viewModel.insertFav(
-                                            Favorite(
-                                                item.id.toString(),
-                                                item.content,
-                                                img = item.img + item.ext
-                                            )
-                                        ))
-
                                         "屏蔽饼干" -> (Toast.makeText(
                                             context,
                                             "屏蔽饼干",
@@ -266,6 +253,27 @@ fun Main_Page(
                                 },
                                 mainForumId = viewModel.forumId.value,
                                 forumCategoryId = forunCategoryId,
+                                isFavored = viewModel.hasId(item.id),
+                                favClickAction = { isFaved ->
+                                    if (!isFaved) {
+                                        viewModel.insertFav(
+                                            Favorite(
+                                                item.id.toString(),
+                                                item.content,
+                                                img = item.img + item.ext
+                                            )
+                                        )
+                                    } else {
+                                        viewModel.deleteFav(
+                                            Favorite(
+                                                id = item.id.toString(),
+                                                content = "",
+                                                img = ""
+                                            )
+                                        )
+                                    }
+                                },
+                                viewModel = viewModel
                             )
                         },
                         isRefreshing = isRefreshing,
@@ -397,16 +405,6 @@ fun Main_Screen(viewModel: MainPage_ViewModel, cookie: Cookie?) {
                             }
                         }
                     },
-                    actions = {
-                        IconButton(onClick = {
-                            viewModel.isRaw.value = !viewModel.isRaw.value
-                        }) {
-                            Icon(
-                                imageVector = ImageVector.vectorResource(id = if (viewModel.isRaw.value) R.drawable.baseline_raw_on_24 else R.drawable.baseline_raw_off_24),
-                                contentDescription = "原始图缩略图切换"
-                            )
-                        }
-                    }
                 )
             },
             bottomBar = {

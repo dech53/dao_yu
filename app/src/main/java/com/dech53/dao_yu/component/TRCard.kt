@@ -3,10 +3,8 @@
 package com.dech53.dao_yu.component
 
 import android.content.Intent
-import android.os.Build.VERSION.SDK_INT
 import android.util.Log
 import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,7 +17,6 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -38,16 +35,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.ImageLoader
-import coil3.compose.AsyncImage
-import coil3.gif.AnimatedImageDecoder
-import coil3.gif.GifDecoder
 import com.dech53.dao_yu.ImageViewer
-import com.dech53.dao_yu.R
 import com.dech53.dao_yu.models.Reply
 import com.dech53.dao_yu.static.Url
 import com.dech53.dao_yu.viewmodels.ThreadInfoView_ViewModel
@@ -55,11 +47,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.layout.ContentScale
 import coil3.compose.SubcomposeAsyncImage
-import coil3.compose.rememberAsyncImagePainter
+import coil3.disk.DiskCache
+import coil3.disk.directory
+import coil3.memory.MemoryCache
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
-import coil3.request.SuccessResult
 import coil3.request.crossfade
+import coil3.toBitmap
+import com.dech53.dao_yu.models.preLoadImage
 import com.dech53.dao_yu.ui.theme.capsuleShape
 import com.dech53.dao_yu.ui.theme.shimmerEffect
 
@@ -69,7 +64,7 @@ fun TRCard(
     item: Reply,
     viewModel: ThreadInfoView_ViewModel,
     modifier: Modifier,
-    isRaw: Boolean = false
+    isRaw: Boolean = false,
 ) {
     Log.d("now属性", item.now)
     val date_ by remember(item.now) {
@@ -80,7 +75,7 @@ fun TRCard(
             )
         )
     }
-    var aspectRatio by remember { mutableStateOf(16f / 9f) }
+
     val time_ by remember(item.now) {
         mutableStateOf(
             Regex("""\d{2}:\d{2}:\d{2}$""").find(item.now)!!.value,
@@ -89,58 +84,58 @@ fun TRCard(
     Log.d("time正则结果", time_)
 
     val context = LocalContext.current
+    val imageUrl = if (isRaw) {
+        Url.IMG_FULL_QA + item.img + item.ext
+    } else {
+        Url.IMG_THUMB_QA + item.img + item.ext
+    }
+    val imageInfo = viewModel.imgList[imageUrl]
+    var imageWidth = imageInfo?.width ?: 200
+    var imageHeight = imageInfo?.height ?: 200
 
-    val imageRequest = ImageRequest.Builder(context)
-        .data((if (isRaw) Url.IMG_FULL_QA else Url.IMG_THUMB_QA) + item.img + item.ext)
-        .crossfade(true)
-        .memoryCachePolicy(CachePolicy.ENABLED)
-        .diskCachePolicy(CachePolicy.ENABLED)
-        .build()
+
+
+    val request = remember(imageUrl) {
+        ImageRequest.Builder(context)
+            .data(imageUrl)
+            .memoryCachePolicy(CachePolicy.ENABLED)
+            .diskCachePolicy(CachePolicy.ENABLED)
+            .build()
+    }
     val imageLoader = remember {
         ImageLoader.Builder(context)
-            .components {
-                if (SDK_INT >= 28) {
-                    add(AnimatedImageDecoder.Factory())
-                } else {
-                    add(GifDecoder.Factory())
-                }
+            .memoryCache {
+                MemoryCache.Builder()
+                    .maxSizePercent(context, 0.25)
+                    .build()
             }
+            .diskCache {
+                DiskCache.Builder()
+                    .directory(context.cacheDir.resolve("image_cache"))
+                    .maxSizePercent(0.2)
+                    .build()
+            }
+            .crossfade(true)
             .build()
     }
-    LaunchedEffect(Unit) {
-        val request = ImageRequest.Builder(context)
-            .data((if (isRaw) Url.IMG_FULL_QA else Url.IMG_THUMB_QA) + item.img + item.ext)
-            .build()
-        val result = imageLoader.execute(request)
-        if (result is SuccessResult) {
-            val width = result.image.width
-            val height = result.image.height
-            aspectRatio = if (height != 0) {
-                width.toFloat() / height.toFloat()
-            } else {
-                16f / 9f
+    LaunchedEffect(isRaw) {
+        if (item.img != "") {
+            if (!viewModel.imgList.containsKey(imageUrl)) {
+                val bitmap = imageLoader.execute(request).image!!.toBitmap()
+                imageWidth = bitmap.width
+                imageHeight = bitmap.height
+                viewModel.imgList[imageUrl] =
+                    preLoadImage(height = bitmap.height, width = bitmap.width)
             }
         }
     }
 
-    val imageModifier = Modifier
-        .clip(RoundedCornerShape(4.dp))
-        .clickable(
-            indication = rememberRipple(bounded = true),
-            interactionSource = remember { MutableInteractionSource() }
-        ) {
-            val intent = Intent(
-                context,
-                ImageViewer::class.java
-            )
-            intent.putExtra(
-                "imgName",
-                item.img + item.ext
-            )
-            context.startActivity(
-                intent
-            )
-        }
+    val imageModifier = if (isRaw) {
+        Modifier.aspectRatio(imageWidth.toFloat() / imageHeight.toFloat())
+    } else {
+        Modifier.size(width = imageWidth.dp, height = imageHeight.dp)
+    }
+
     Card(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
@@ -272,21 +267,42 @@ fun TRCard(
                 context = context,
                 posterName = posterName,
             )
-            if (item.img != "") {
-                SubcomposeAsyncImage(
-                    imageLoader = imageLoader,
-                    model = imageRequest,
-                    contentDescription = "img from usr ${item.user_hash}",
-                    modifier = imageModifier.aspectRatio(aspectRatio),
-                    loading = {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .shimmerEffect()
-                        )
-                    },
-                    contentScale = ContentScale.Fit
-                )
+            key(imageInfo) {
+                if (item.img != "") {
+                    SubcomposeAsyncImage(
+                        imageLoader = imageLoader,
+                        model = request,
+                        contentDescription = null,
+                        loading = {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(0.5f)
+                                    .height(imageHeight.dp)
+                                    .shimmerEffect()
+                            ) {
+                            }
+                        },
+                        modifier = imageModifier
+                            .clickable(
+                                indication = rememberRipple(bounded = true),
+                                interactionSource = remember { MutableInteractionSource() }
+                            ) {
+                                val intent = Intent(
+                                    context,
+                                    ImageViewer::class.java
+                                )
+                                intent.putExtra(
+                                    "imgName",
+                                    item.img + item.ext
+                                )
+                                context.startActivity(
+                                    intent
+                                )
+                            },
+                        contentScale = ContentScale.Fit,
+                        alignment = Alignment.CenterStart
+                    )
+                }
             }
         }
     }

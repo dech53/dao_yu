@@ -78,6 +78,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -107,8 +108,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import coil3.ImageLoader
 import coil3.compose.AsyncImage
+import coil3.disk.DiskCache
+import coil3.disk.directory
 import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
+import coil3.memory.MemoryCache
+import coil3.request.CachePolicy
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import coil3.toBitmap
 import com.dech53.dao_yu.component.CustomExposedDropMenu
 import com.dech53.dao_yu.component.HtmlTRText
 import com.dech53.dao_yu.component.ShimmerList
@@ -150,6 +158,7 @@ class ThreadAndReplyView : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        viewModel.imgList.clear()
         Log.d("TRA", "进程销毁")
     }
 
@@ -643,7 +652,7 @@ class ThreadAndReplyView : ComponentActivity() {
                                                             item = reply,
                                                             viewModel,
                                                             modifier = Modifier.animateItem(),
-                                                            isRaw = viewModel.isRaw.value
+                                                            isRaw = viewModel.isRaw.value,
                                                         )
                                                     } else {
                                                         Card(

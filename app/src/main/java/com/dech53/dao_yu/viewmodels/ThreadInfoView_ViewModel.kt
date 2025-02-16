@@ -17,6 +17,7 @@ import com.dech53.dao_yu.models.Cookie
 import com.dech53.dao_yu.models.Favorite
 import com.dech53.dao_yu.models.QuoteRef
 import com.dech53.dao_yu.models.Reply
+import com.dech53.dao_yu.models.preLoadImage
 import com.dech53.dao_yu.models.toReplies
 import com.dech53.dao_yu.utils.Http_request
 import com.dech53.dao_yu.utils.JudgeHtmlResult
@@ -38,6 +39,9 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val fav
             favDao.delete(fav)
         }
     }
+
+
+    val imgList = mutableStateMapOf<String, preLoadImage>()
 
     fun addFave(fav: Favorite) {
         viewModelScope.launch {
