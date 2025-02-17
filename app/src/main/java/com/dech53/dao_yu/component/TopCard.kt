@@ -76,12 +76,10 @@ fun Forum_card(
     forumId: String,
     forumIdClickAction: () -> Unit,
     forumCategoryId: String,
-    isFavored: Boolean,
     favClickAction: (Boolean) -> Unit,
-    viewModel: MainPage_ViewModel
+    viewModel: MainPage_ViewModel,
+    isFaved:Boolean
 ) {
-    var isFaved = remember { mutableStateOf(isFavored) }
-
     val dateRegex = Regex(pattern = "[^(]*|(?<=\\))[^)]*")
     val replace_ = Regex(pattern = "-")
     val calculatedDate by remember(thread.now) {
@@ -308,11 +306,10 @@ fun Forum_card(
                     CircleButton(
                         size = 40.dp,
                         onClick = {
-                            favClickAction(isFaved.value)
-                            isFaved.value = !isFaved.value
+                            favClickAction(isFaved)
                         },
                         backGroundColor = MaterialTheme.colorScheme.primary.copy(0.3f),
-                        imageVector = ImageVector.vectorResource(if (isFaved.value) R.drawable.baseline_favorite_24 else R.drawable.outline_favorite_border_24)
+                        imageVector = ImageVector.vectorResource(if (isFaved) R.drawable.baseline_favorite_24 else R.drawable.outline_favorite_border_24)
                     )
                 }
                 Row {

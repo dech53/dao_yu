@@ -94,7 +94,6 @@ fun TRCard(
     var imageHeight = imageInfo?.height ?: 200
 
 
-
     val request = remember(imageUrl) {
         ImageRequest.Builder(context)
             .data(imageUrl)
@@ -176,7 +175,7 @@ fun TRCard(
                     Text(
                         text = item.user_hash,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
+                        fontSize = if (item.id != 9999999) 14.sp else 17.sp,
                         color = if (item.user_hash == "Admin") Color.Red else MaterialTheme.colorScheme.primary
                     )
                     Spacer(
@@ -206,36 +205,38 @@ fun TRCard(
                         }
                     }
                 }
-                Text(
-                    text = "No.${item.id}",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-            Row(
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row {
+                if (item.id != 9999999)
                     Text(
-                        text = date_,
+                        text = "No.${item.id}",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp
-                    )
-                    Spacer(
-                        modifier = Modifier.padding(
-                            3.dp
-                        )
-                    )
-                    Text(
-                        text = time_,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp,
+                        fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.primary
                     )
-                }
             }
+            if (item.id != 9999999)
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row {
+                        Text(
+                            text = date_,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                        Spacer(
+                            modifier = Modifier.padding(
+                                3.dp
+                            )
+                        )
+                        Text(
+                            text = time_,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
             if (item.sage == 1) {
                 Text(
                     text = "SAGE",

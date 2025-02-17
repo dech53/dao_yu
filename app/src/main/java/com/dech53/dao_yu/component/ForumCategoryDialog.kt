@@ -37,10 +37,11 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
 import com.dech53.dao_yu.R.drawable
+import com.dech53.dao_yu.static.ForumSort
 
 @Composable
 fun ForumCategoryDialog(
-    forumCategory: List<ForumCategory>,
+    forumCategory: List<ForumSort>,
     viewModel: MainPage_ViewModel,
     changeDrawerState: () -> Unit,
 ) {
@@ -51,15 +52,15 @@ fun ForumCategoryDialog(
         horizontalAlignment = Alignment.Start,
         verticalArrangement = Arrangement.Top
     ) {
-        forumCategory.forEach { forumCategory ->
-            ExpandableCategory(forumCategory, viewModel, changeDrawerState)
+        forumCategory.forEach { forumSort ->
+            ExpandableCategory(forumSort, viewModel, changeDrawerState)
         }
     }
 }
 
 @Composable
 fun ExpandableCategory(
-    category: ForumCategory,
+    category: ForumSort,
     viewModel: MainPage_ViewModel,
     changeDrawerState: () -> Unit
 ) {
@@ -123,33 +124,35 @@ fun ExpandableCategory(
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 category.forums.forEach { forum ->
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 5.dp)
-                            .clickable {
-                                isExpanded = !isExpanded
-                                //forumId
-                                viewModel.mainForumId.value = category.id
-                                viewModel.changeForumId(
-                                    forum.id,
-                                    true,
-                                    category.id
-                                )
-                                viewModel.changeTitle(forum.name)
-                                changeDrawerState()
-                            },
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surface,
-                            contentColor = MaterialTheme.colorScheme.onSurface
-                        )
-                    ) {
-                        Text(
-                            text = forum.name,
-                            style = MaterialTheme.typography.bodyMedium,
+                    if(forum.id != "-1") {
+                        Card(
                             modifier = Modifier
-                                .padding(12.dp)
-                        )
+                                .fillMaxWidth()
+                                .padding(start = 5.dp)
+                                .clickable {
+                                    isExpanded = !isExpanded
+                                    //forumId
+                                    viewModel.mainForumId.value = category.id
+                                    viewModel.changeForumId(
+                                        forum.id,
+                                        true,
+                                        category.id
+                                    )
+                                    viewModel.changeTitle(forum.name)
+                                    changeDrawerState()
+                                },
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                contentColor = MaterialTheme.colorScheme.onSurface
+                            )
+                        ) {
+                            Text(
+                                text = forum.name,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier
+                                    .padding(12.dp)
+                            )
+                        }
                     }
                 }
             }

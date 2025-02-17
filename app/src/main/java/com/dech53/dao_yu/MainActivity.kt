@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -71,11 +70,8 @@ import com.dech53.dao_yu.dao.CookieDatabase
 import com.dech53.dao_yu.dao.FavoriteDataBase
 import com.dech53.dao_yu.models.Cookie
 import com.dech53.dao_yu.models.Favorite
-import com.dech53.dao_yu.models.preLoadImage
-import com.dech53.dao_yu.static.Url
 import com.dech53.dao_yu.static.forumCategories
 import com.dech53.dao_yu.static.forumMap
-import com.dech53.dao_yu.static.forumNameMap
 import com.dech53.dao_yu.viewmodels.MainPage_ViewModel
 import com.dech53.dao_yu.views.FavView
 import com.dech53.dao_yu.views.SettingsView
@@ -83,9 +79,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -142,6 +135,7 @@ fun Main_Page(
     val isRefreshing by remember { viewModel.isRefreshing }
     val interactionSource = remember { MutableInteractionSource() }
     val lazyListState = viewModel.mainPageListState
+    val favorites by viewModel.favData.collectAsState()
     val context = LocalContext.current
     val onError by remember { viewModel.onError }
     val scope = rememberCoroutineScope()
@@ -216,7 +210,7 @@ fun Main_Page(
                                     val intent = Intent(context, ThreadAndReplyView::class.java)
                                     intent.putExtra("threadId", item.id.toString())
                                     intent.putExtra("hash", cookie?.cookie ?: "")
-                                    if (viewModel.hasId(item.id)) {
+                                    if (viewModel.hasId(item.id.toString())) {
                                         intent.putExtra("hasId", true)
                                     }
                                     context.startActivity(intent)
@@ -253,7 +247,6 @@ fun Main_Page(
                                 },
                                 mainForumId = viewModel.forumId.value,
                                 forumCategoryId = forunCategoryId,
-                                isFavored = viewModel.hasId(item.id),
                                 favClickAction = { isFaved ->
                                     if (!isFaved) {
                                         viewModel.insertFav(
@@ -273,7 +266,10 @@ fun Main_Page(
                                         )
                                     }
                                 },
-                                viewModel = viewModel
+                                viewModel = viewModel,
+                                isFaved = favorites.any {
+                                    it.id == item.id.toString()
+                                }
                             )
                         },
                         isRefreshing = isRefreshing,
@@ -313,7 +309,7 @@ fun Main_Screen(viewModel: MainPage_ViewModel, cookie: Cookie?) {
     val navController = rememberNavController()
 
     val title by remember { viewModel.title }
-    LaunchedEffect(Unit) {
+    LaunchedEffect(true) {
         viewModel.initHash()
         viewModel.getAllFav()
         withContext(Dispatchers.IO) {
@@ -333,7 +329,7 @@ fun Main_Screen(viewModel: MainPage_ViewModel, cookie: Cookie?) {
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet(modifier = Modifier.width(280.dp)) {
-                Text("菜单", modifier = Modifier.padding(16.dp))
+                Text("菜单", modifier = Modifier.padding(22.dp))
                 HorizontalDivider()
                 Box(
                     contentAlignment = Alignment.Center,
@@ -349,17 +345,16 @@ fun Main_Screen(viewModel: MainPage_ViewModel, cookie: Cookie?) {
 
                 ) {
                     ForumCategoryDialog(
-                        forumCategory = forumCategories,
+                        forumCategory = viewModel.forumList,
                         viewModel = viewModel,
                         changeDrawerState = {
-                            scope.launch(Dispatchers.IO) {
+                            scope.launch(Dispatchers.Main) {
                                 drawerState.close()
                                 viewModel.mainPageListState.scrollToItem(0)
                             }
                         }
                     )
                 }
-
             }
         }
     ) {

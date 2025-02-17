@@ -12,6 +12,41 @@ data class ForumItem(
 //    val clickAction:()->Unit
 )
 
+data class Forum(
+    val id: String,
+    val msg: String,
+    val name: String,
+    val fgroup: String? = null,
+    val sort: String? = null,
+    val showName: String? = null,
+    val interval: String? = null,
+    val safeMode: String? = null,
+    val autoDelete: String? = null,
+    val threadCount: String? = null,
+    val permissionLevel: String? = null,
+    val forumFuseId: String? = null,
+    val createdAt: String? = null,
+    val updateAt: String? = null,
+    val status: String? = null
+)
+
+data class ForumSort(
+    val id:String,
+    val name:String,
+    val sort:String,
+    val status:String,
+    val forums:List<Forum>
+)
+
+
+data class TimeLine(
+    val id:Int,
+    val name:String,
+    val display_name:String,
+    val notice:String,
+    val max_page:Int
+)
+
 
 val forumMap: Map<String, String> = mapOf(
     "1" to "综合线",

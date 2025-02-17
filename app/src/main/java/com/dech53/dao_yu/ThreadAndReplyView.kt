@@ -646,7 +646,6 @@ class ThreadAndReplyView : ComponentActivity() {
                                                 modifier = Modifier.fillMaxSize()
                                             ) {
                                                 itemsIndexed(threadInfo!!) { index, reply ->
-                                                    if (reply.id != 9999999) {
                                                         TRCard(
                                                             posterName = poster,
                                                             item = reply,
@@ -654,47 +653,6 @@ class ThreadAndReplyView : ComponentActivity() {
                                                             modifier = Modifier.animateItem(),
                                                             isRaw = viewModel.isRaw.value,
                                                         )
-                                                    } else {
-                                                        Card(
-                                                            colors = CardDefaults.cardColors(
-                                                                containerColor = MaterialTheme.colorScheme.primary.copy(
-                                                                    alpha = 0.1f
-                                                                ),
-                                                            ),
-                                                            modifier = Modifier
-                                                                .clip(RoundedCornerShape(22.dp))
-                                                                .padding(
-                                                                    horizontal = 13.dp,
-                                                                    vertical = 8.dp
-                                                                )
-                                                                .fillMaxWidth()
-                                                                .animateItem()
-                                                                .animateContentSize()
-                                                        ) {
-                                                            Column(modifier = Modifier.padding(5.dp)) {
-                                                                Row(
-                                                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                                                    modifier = Modifier.fillMaxWidth()
-                                                                ) {
-                                                                    Row {
-                                                                        Text(
-                                                                            text = reply.user_hash,
-                                                                            fontWeight = FontWeight.Bold,
-                                                                            fontSize = 17.sp,
-                                                                            color = MaterialTheme.colorScheme.primary
-                                                                        )
-                                                                    }
-                                                                }
-                                                                HtmlTRText(
-                                                                    htmlContent = reply.content,
-                                                                    maxLines = Int.MAX_VALUE,
-                                                                    viewModel = viewModel,
-                                                                    context = context,
-                                                                    posterName = poster,
-                                                                )
-                                                            }
-                                                        }
-                                                    }
                                                     if (index == 0) {
                                                         Row(
                                                             horizontalArrangement = Arrangement.Center,

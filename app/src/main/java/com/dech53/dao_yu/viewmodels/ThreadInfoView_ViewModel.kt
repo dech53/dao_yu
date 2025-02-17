@@ -36,7 +36,9 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val fav
 
     fun deleteFav(fav: Favorite) {
         viewModelScope.launch {
-            favDao.delete(fav)
+            withContext(Dispatchers.IO) {
+                favDao.delete(fav)
+            }
         }
     }
 
@@ -45,7 +47,9 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val fav
 
     fun addFave(fav: Favorite) {
         viewModelScope.launch {
-            favDao.insert(fav)
+            withContext(Dispatchers.IO) {
+                favDao.insert(fav)
+            }
         }
     }
 
@@ -240,7 +244,7 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val fav
                     onComplete()
                 }
             }
-        } else if(direction == "B") {
+        } else if (direction == "B") {
             viewModelScope.launch {
                 skipPage.value--
                 try {
@@ -252,11 +256,12 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val fav
                     }
                     newData?.let {
                         Log.d("新获取的数据", it.toReplies().drop(1).size.toString())
-                        _threadInfo.value = _threadInfo.value.orEmpty().toMutableList().also { list ->
-                            if (list.isNotEmpty()) {
-                                list.addAll(1, it.toReplies().drop(1))
+                        _threadInfo.value =
+                            _threadInfo.value.orEmpty().toMutableList().also { list ->
+                                if (list.isNotEmpty()) {
+                                    list.addAll(1, it.toReplies().drop(1))
+                                }
                             }
-                        }
                         newData.toReplies().map { it.toQuoteRef() }.forEach { quoteRef ->
                             contentContext[quoteRef.id.toString()] = quoteRef
                         }
@@ -281,8 +286,8 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val fav
 
 
     fun replyThread(
-        name:String = "无名氏",
-        title:String = "无标题",
+        name: String = "无名氏",
+        title: String = "无标题",
         content: String,
         resto: String,
         cookie: String,
@@ -294,7 +299,7 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val fav
         viewModelScope.launch {
             val result = withContext(Dispatchers.IO) {
                 Http_request.replyThread(
-                    name,title,content, resto, cookie, img, context
+                    name, title, content, resto, cookie, img, context
                 )
             }
             IsSending.value = false
