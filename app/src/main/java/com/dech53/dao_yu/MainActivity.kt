@@ -70,6 +70,9 @@ import com.dech53.dao_yu.dao.CookieDatabase
 import com.dech53.dao_yu.dao.FavoriteDataBase
 import com.dech53.dao_yu.models.Cookie
 import com.dech53.dao_yu.models.Favorite
+import com.dech53.dao_yu.static.Forum
+import com.dech53.dao_yu.static.ForumSort
+import com.dech53.dao_yu.static.TimeLine
 import com.dech53.dao_yu.static.forumCategories
 import com.dech53.dao_yu.static.forumMap
 import com.dech53.dao_yu.viewmodels.MainPage_ViewModel
@@ -178,7 +181,7 @@ fun Main_Page(
                     interactionSource = interactionSource,
                     indication = null
                 ) {
-                    viewModel.refreshData(false)
+                    viewModel.refreshData(false,"")
                 }
             )
         }
@@ -241,9 +244,8 @@ fun Main_Page(
                                             lazyListState.scrollToItem(0)
                                         }
                                     }
-                                    viewModel.changeForumId(item.fid.toString(), true)
+                                    viewModel.changeForumId(forumMap[item.fid.toString()]!!, true)
                                     viewModel.mainForumId.value = ""
-                                    viewModel.changeTitle(forumMap[item.fid.toString()]!!)
                                 },
                                 mainForumId = viewModel.forumId.value,
                                 forumCategoryId = forunCategoryId,
@@ -276,11 +278,8 @@ fun Main_Page(
                         //refreshing method
                         onRefresh = {
                             scope.launch {
-                                withContext(Dispatchers.Main) {
-                                    lazyListState.scrollToItem(0)
-                                }
                                 withContext(Dispatchers.IO) {
-                                    viewModel.refreshData(true)
+                                    viewModel.refreshData(true,"")
                                 }
                             }
                         },
@@ -331,8 +330,7 @@ fun Main_Screen(viewModel: MainPage_ViewModel, cookie: Cookie?) {
             ModalDrawerSheet(modifier = Modifier.width(280.dp)) {
                 Text("菜单", modifier = Modifier.padding(22.dp))
                 HorizontalDivider()
-                Box(
-                    contentAlignment = Alignment.Center,
+                Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(10.dp)
@@ -344,6 +342,31 @@ fun Main_Screen(viewModel: MainPage_ViewModel, cookie: Cookie?) {
                         .clip(MaterialTheme.shapes.medium)
 
                 ) {
+                    ForumCategoryDialog(
+                        forumCategory = listOf(
+                            ForumSort(
+                                id = "999",
+                                name = "时间线",
+                                sort = "",
+                                status = "",
+                                forums = viewModel.timeLine.map {
+                                    Forum(
+                                        id = it.id.toString(),
+                                        msg = it.notice,
+                                        name = it.name,
+                                        showName = it.display_name
+                                    )
+                                }
+                            )
+                        ),
+                        viewModel = viewModel,
+                        changeDrawerState = {
+                            scope.launch(Dispatchers.Main) {
+                                drawerState.close()
+                                viewModel.mainPageListState.scrollToItem(0)
+                            }
+                        }
+                    )
                     ForumCategoryDialog(
                         forumCategory = viewModel.forumList,
                         viewModel = viewModel,

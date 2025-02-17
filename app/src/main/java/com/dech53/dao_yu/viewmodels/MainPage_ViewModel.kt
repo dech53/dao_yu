@@ -28,7 +28,6 @@ class MainPage_ViewModel(private val cookieDao: CookieDao, private val favDao: F
 
 
     var isThread = mutableStateOf(false)
-        private set
 
     var pageId = mutableStateOf(1)
         private set
@@ -100,6 +99,8 @@ class MainPage_ViewModel(private val cookieDao: CookieDao, private val favDao: F
 
     var forumList = mutableStateListOf<ForumSort>()
 
+    var timeLine = mutableStateListOf<TimeLine>()
+
     init {
 //        initHash()
         initTimeLine()
@@ -109,25 +110,10 @@ class MainPage_ViewModel(private val cookieDao: CookieDao, private val favDao: F
 
     fun initTimeLine() {
         viewModelScope.launch {
-            val timeLine = withContext(Dispatchers.IO) {
+            val data = withContext(Dispatchers.IO) {
                 Http_request.get<TimeLine>("getTimelineList", cookie.value?.cookie ?: "")
             } ?: emptyList()
-            val forumSorts = timeLine.map {
-                Forum(
-                    id = it.id.toString(),
-                    msg = it.notice,
-                    name = it.display_name,
-                )
-            }
-            forumList.add(
-                ForumSort(
-                    id = "999",
-                    name = "时间线",
-                    sort = "0",
-                    status = "1",
-                    forums = forumSorts
-                )
-            )
+            timeLine.addAll(data)
         }
     }
 
@@ -135,8 +121,8 @@ class MainPage_ViewModel(private val cookieDao: CookieDao, private val favDao: F
         viewModelScope.launch {
             val data = withContext(Dispatchers.IO) {
                 Http_request.get<ForumSort>("getForumList", cookie.value?.cookie ?: "")
-            }
-            forumList.addAll(data ?: emptyList())
+            } ?: emptyList()
+            forumList.addAll(data)
         }
     }
 
@@ -174,7 +160,7 @@ class MainPage_ViewModel(private val cookieDao: CookieDao, private val favDao: F
     var isInitialLoad = mutableStateOf(true)
 
     // refresh data
-    fun refreshData(showIcon: Boolean) {
+    fun refreshData(showIcon: Boolean, name: String) {
         viewModelScope.launch {
             try {
                 if (showIcon) {
@@ -204,13 +190,19 @@ class MainPage_ViewModel(private val cookieDao: CookieDao, private val favDao: F
     }
 
 
-    fun changeForumId(id: String, showIcon: Boolean, categoryId: String = "") {
-        if (id in setOf("1", "2", "3") && categoryId == "999") isThread.value = true
-        else isThread.value = false
-        if (forumId.value != id || forumId.value in setOf("2", "3")) {
-            forumId.value = id
-            refreshData(showIcon)
+    fun changeForumId(title: String, showIcon: Boolean) {
+        if (timeLine.any { it.name == title }) {
+            isThread.value = true
+            forumId.value = timeLine.find { it.name == title }?.id.toString()
+        } else {
+            isThread.value = false
+            forumId.value = forumList.flatMap { it.forums }
+                .find { it.name == title }?.id ?: ""
+
         }
+        Log.d("版块id测试",forumId.value)
+        changeTitle(title)
+        refreshData(showIcon, title)
     }
 
     fun changeTitle(t: String) {

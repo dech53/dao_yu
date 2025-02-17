@@ -47,7 +47,6 @@ fun ForumCategoryDialog(
 ) {
     Column(
         modifier = Modifier
-            .fillMaxSize()
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.Start,
         verticalArrangement = Arrangement.Top
@@ -134,11 +133,9 @@ fun ExpandableCategory(
                                     //forumId
                                     viewModel.mainForumId.value = category.id
                                     viewModel.changeForumId(
-                                        forum.id,
+                                        forum.name,
                                         true,
-                                        category.id
                                     )
-                                    viewModel.changeTitle(forum.name)
                                     changeDrawerState()
                                 },
                             colors = CardDefaults.cardColors(

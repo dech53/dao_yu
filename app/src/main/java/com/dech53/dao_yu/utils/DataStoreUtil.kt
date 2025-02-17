@@ -6,7 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 
 class DataStoreUtil private constructor(private val context: Context) {
-    val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "fav_list")
+    val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
     companion object {
         private var instance: DataStoreUtil? = null
