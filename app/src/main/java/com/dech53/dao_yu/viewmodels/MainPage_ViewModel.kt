@@ -59,15 +59,19 @@ class MainPage_ViewModel(private val cookieDao: CookieDao, private val favDao: F
 
     fun getAllFav() {
         viewModelScope.launch {
-            favDao.getAll().collect { newFavorites ->
-                _favorites.value = newFavorites
+            withContext(Dispatchers.IO) {
+                favDao.getAll().collect { newFavorites ->
+                    _favorites.value = newFavorites
+                }
             }
         }
     }
 
     fun deleteFav(fav: Favorite) {
         viewModelScope.launch {
-            favDao.delete(fav)
+            withContext(Dispatchers.IO) {
+                favDao.delete(fav)
+            }
         }
     }
 
@@ -89,20 +93,23 @@ class MainPage_ViewModel(private val cookieDao: CookieDao, private val favDao: F
     var cookie = mutableStateOf<Cookie?>(null)
     fun initHash() {
         viewModelScope.launch(Dispatchers.IO) {
-            val hash = cookieDao.getHashToVerify()
-            withContext(Dispatchers.Main) {
-                cookie.value = hash
+            withContext(Dispatchers.IO) {
+                val hash = cookieDao.getHashToVerify()
+                withContext(Dispatchers.Main) {
+                    cookie.value = hash
+                }
             }
         }
     }
 
 
     var forumList = mutableStateListOf<ForumSort>()
-
     var timeLine = mutableStateListOf<TimeLine>()
 
     init {
-//        initHash()
+        // 初始化数据
+        initHash()
+        getAllFav()
         initTimeLine()
         initForum()
         isThread.value = mainForumId.value == "999"
@@ -110,19 +117,33 @@ class MainPage_ViewModel(private val cookieDao: CookieDao, private val favDao: F
 
     fun initTimeLine() {
         viewModelScope.launch {
-            val data = withContext(Dispatchers.IO) {
-                Http_request.get<TimeLine>("getTimelineList", cookie.value?.cookie ?: "")
-            } ?: emptyList()
-            timeLine.addAll(data)
+            while (true) {
+                try {
+                    val data = withContext(Dispatchers.IO) {
+                        Http_request.get<TimeLine>("getTimelineList", cookie.value?.cookie ?: "")
+                    } ?: emptyList()
+                    timeLine.addAll(data)
+                    break
+                } catch (e: Exception) {
+                    Log.e("时间线获取", e.toString())
+                }
+            }
         }
     }
 
     fun initForum() {
         viewModelScope.launch {
-            val data = withContext(Dispatchers.IO) {
-                Http_request.get<ForumSort>("getForumList", cookie.value?.cookie ?: "")
-            } ?: emptyList()
-            forumList.addAll(data)
+            while (true) {
+                try {
+                    val data = withContext(Dispatchers.IO) {
+                        Http_request.get<ForumSort>("getForumList", cookie.value?.cookie ?: "")
+                    } ?: emptyList()
+                    forumList.addAll(data)
+                    break
+                } catch (e: Exception) {
+                    Log.e("版块获取", e.toString())
+                }
+            }
         }
     }
 
@@ -148,6 +169,7 @@ class MainPage_ViewModel(private val cookieDao: CookieDao, private val favDao: F
                 }
             } catch (e: Exception) {
                 onError.value = true
+                _dataState.clear()
                 Log.d("main_page", "加载失败")
             }
             isRefreshing.value = false
@@ -184,6 +206,7 @@ class MainPage_ViewModel(private val cookieDao: CookieDao, private val favDao: F
                 }
             } catch (e: Exception) {
                 onError.value = true
+                _dataState.clear()
                 Log.d("main_page", "刷新失败: ${e.message}")
             }
         }
@@ -200,7 +223,7 @@ class MainPage_ViewModel(private val cookieDao: CookieDao, private val favDao: F
                 .find { it.name == title }?.id ?: ""
 
         }
-        Log.d("版块id测试",forumId.value)
+        Log.d("版块id测试", forumId.value)
         changeTitle(title)
         refreshData(showIcon, title)
     }

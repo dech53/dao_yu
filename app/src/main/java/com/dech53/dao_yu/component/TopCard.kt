@@ -38,6 +38,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
@@ -127,15 +128,21 @@ fun Forum_card(
 
     LaunchedEffect(Unit) {
         if (thread.img != "") {
-            if (!viewModel.imgList.containsKey(Url.IMG_THUMB_QA + thread.img + thread.ext)) {
-                val bitmap = imageLoader.execute(request).image!!.toBitmap()
-                imageWidth = bitmap.width
-                imageHeight = bitmap.height
-                viewModel.imgList[Url.IMG_THUMB_QA + thread.img + thread.ext] =
-                    preLoadImage(height = bitmap.height, width = bitmap.width)
+            val imageUrl = Url.IMG_THUMB_QA + thread.img + thread.ext
+            if (!viewModel.imgList.containsKey(imageUrl)) {
+                val bitmap = imageLoader.execute(request).image?.toBitmap()
+                if (bitmap != null) {
+                    imageWidth = bitmap.width
+                    imageHeight = bitmap.height
+                    synchronized(viewModel.imgList) {
+                        viewModel.imgList[imageUrl] = preLoadImage(height = bitmap.height, width = bitmap.width)
+                    }
+                    Log.d("TRA", "Image dimensions fetched: width=${imageWidth}, height=${imageHeight}")
+                } else {
+                    Log.e("TRA", "Failed to load image: $imageUrl")
+                }
             }
         }
-        Log.d("TRA", "wh fetched")
     }
 
     var isContextVisible by rememberSaveable { mutableStateOf(false) }
@@ -143,7 +150,7 @@ fun Forum_card(
     var itemWidth by remember { mutableStateOf(0.dp) }
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
             contentColor = MaterialTheme.colorScheme.onSurface
         ),
         modifier = Modifier
@@ -299,7 +306,7 @@ fun Forum_card(
                         onClick = {
                             isContextVisible = true
                         },
-                        backGroundColor = MaterialTheme.colorScheme.primary.copy(0.3f),
+                        backGroundColor = MaterialTheme.colorScheme.primary.copy(0.11f),
                         imageVector = ImageVector.vectorResource(R.drawable.baseline_more_vert_24)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
@@ -308,7 +315,7 @@ fun Forum_card(
                         onClick = {
                             favClickAction(isFaved)
                         },
-                        backGroundColor = MaterialTheme.colorScheme.primary.copy(0.3f),
+                        backGroundColor = MaterialTheme.colorScheme.primary.copy(0.11f),
                         imageVector = ImageVector.vectorResource(if (isFaved) R.drawable.baseline_favorite_24 else R.drawable.outline_favorite_border_24)
                     )
                 }
@@ -317,11 +324,19 @@ fun Forum_card(
                         badge = {
                             if (thread.ReplyCount > 0) {
                                 Badge(
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .padding(top = 4.dp, end = 4.dp)
+                                        .border(width = 0.5.dp, color = MaterialTheme.colorScheme.primary, shape = CircleShape)
+                                        .clip(CircleShape),
                                     containerColor = MaterialTheme.colorScheme.surfaceContainer,
                                     contentColor = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.align(Alignment.TopEnd)
                                 ) {
-                                    Text(text = thread.ReplyCount.toString())
+                                    Text(
+                                        text = if(thread.ReplyCount >= 999) "999+" else thread.ReplyCount.toString(),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
                                 }
                             }
                         },
@@ -333,7 +348,7 @@ fun Forum_card(
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary.copy(0.3f))
+                                .background(MaterialTheme.colorScheme.primary.copy(0.11f))
                         ) {
                             Icon(
                                 imageVector = ImageVector.vectorResource(id = R.drawable.baseline_message_24),

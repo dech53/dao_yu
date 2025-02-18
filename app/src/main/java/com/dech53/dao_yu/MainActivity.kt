@@ -8,6 +8,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -53,6 +55,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -76,6 +79,7 @@ import com.dech53.dao_yu.static.TimeLine
 import com.dech53.dao_yu.static.forumCategories
 import com.dech53.dao_yu.static.forumMap
 import com.dech53.dao_yu.viewmodels.MainPage_ViewModel
+import com.dech53.dao_yu.views.ChartView
 import com.dech53.dao_yu.views.FavView
 import com.dech53.dao_yu.views.SettingsView
 import kotlinx.coroutines.CoroutineScope
@@ -181,7 +185,7 @@ fun Main_Page(
                     interactionSource = interactionSource,
                     indication = null
                 ) {
-                    viewModel.refreshData(false,"")
+                    viewModel.refreshData(false, "")
                 }
             )
         }
@@ -279,7 +283,7 @@ fun Main_Page(
                         onRefresh = {
                             scope.launch {
                                 withContext(Dispatchers.IO) {
-                                    viewModel.refreshData(true,"")
+                                    viewModel.refreshData(true, "")
                                 }
                             }
                         },
@@ -309,8 +313,7 @@ fun Main_Screen(viewModel: MainPage_ViewModel, cookie: Cookie?) {
 
     val title by remember { viewModel.title }
     LaunchedEffect(true) {
-        viewModel.initHash()
-        viewModel.getAllFav()
+
         withContext(Dispatchers.IO) {
             delay(100)
             viewModel.loadData()
@@ -383,7 +386,7 @@ fun Main_Screen(viewModel: MainPage_ViewModel, cookie: Cookie?) {
     ) {
         Scaffold(
             floatingActionButton = {
-                if ((title != "收藏") && (title != "设置")) {
+                if (!(title in listOf("收藏", "设置", "统计"))) {
                     FloatingActionButton(
                         onClick = {
                             showBottomSheet = !showBottomSheet
@@ -407,7 +410,7 @@ fun Main_Screen(viewModel: MainPage_ViewModel, cookie: Cookie?) {
                         titleContentColor = MaterialTheme.colorScheme.primary,
                     ),
                     navigationIcon = {
-                        if ((title != "收藏") && (title != "设置")) {
+                        if (!(title in listOf("收藏", "设置", "统计"))) {
                             IconButton(onClick = {
                                 //TODO change the request forum id
                                 scope.launch(Dispatchers.IO) {
@@ -450,7 +453,7 @@ fun Main_Screen(viewModel: MainPage_ViewModel, cookie: Cookie?) {
                                     }
                                 ) {
                                     Icon(
-                                        imageVector = if (selectedItemIndex == index) item.selectedIcon else item.unselectedIcon,
+                                        painter = painterResource(if (selectedItemIndex == index) item.selectedIcon else item.unselectedIcon),
                                         contentDescription = item.title,
                                         modifier = Modifier.animateContentSize()
                                     )
@@ -522,7 +525,14 @@ fun Main_Screen(viewModel: MainPage_ViewModel, cookie: Cookie?) {
                 }
             }
             //navigation route
-            NavHost(navController = navController, startDestination = "主页") {
+            NavHost(
+                navController = navController,
+                startDestination = "主页",
+                enterTransition = { EnterTransition.None },
+                exitTransition = { ExitTransition.None },
+                popEnterTransition = {EnterTransition.None },
+                popExitTransition = { ExitTransition.None },
+            ) {
                 composable("主页") {
                     Main_Page(
                         padding = innerPadding,
@@ -537,6 +547,9 @@ fun Main_Screen(viewModel: MainPage_ViewModel, cookie: Cookie?) {
                         viewModel.cookie.value?.cookie ?: "",
                         viewModel = viewModel
                     )
+                }
+                composable("统计") {
+                    ChartView(padding = innerPadding)
                 }
             }
         }

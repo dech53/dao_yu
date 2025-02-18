@@ -23,13 +23,13 @@ import com.dech53.dao_yu.models.emptyCookie
 @Composable
 fun CustomExposedDropMenu(itemList: List<Cookie>, onSelect: (String) -> Unit) {
     var dropMenuExpanded by remember { mutableStateOf(false) }
-    var selected by remember { mutableStateOf(if (itemList.isNotEmpty()) itemList[0] else emptyCookie()) }
+    var selected by remember { mutableStateOf(if (itemList.isNotEmpty()) itemList.find { it.isToVerify == 1 } else emptyCookie()) }
     ExposedDropdownMenuBox(
         expanded = dropMenuExpanded,
         onExpandedChange = { dropMenuExpanded = !dropMenuExpanded }
     ) {
         TextField(
-            value = selected.name,
+            value = selected?.name?:"暂无饼干",
             onValueChange = {},
             readOnly = true,
             trailingIcon = {

@@ -31,8 +31,8 @@ import kotlinx.coroutines.withContext
 
 class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val favDao: FavoriteDao) :
     ViewModel() {
-    private val _threadInfo = mutableStateOf<List<Reply>?>(null)
-    var threadInfo: State<List<Reply>?> = _threadInfo
+    private val _threadInfo = mutableStateOf<Set<Reply>>(LinkedHashSet())
+    var threadInfo: State<Set<Reply>> = _threadInfo
 
     fun deleteFav(fav: Favorite) {
         viewModelScope.launch {
@@ -82,15 +82,18 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val fav
     var cookieList = MutableStateFlow<List<Cookie>>(emptyList())
     fun initCookieList() {
         viewModelScope.launch {
-            cookieDao.getAll().collect { cookies ->
-                cookieList.value = cookies
+            withContext(Dispatchers.IO) {
+                cookieDao.getAll().collect { cookies ->
+                    cookieList.value = cookies
+                }
             }
         }
     }
-
-    init {
+    init{
         initCookieList()
     }
+
+    var tipsCount = mutableStateOf(0)
 
     var IsSending = mutableStateOf(false)
 
@@ -132,13 +135,18 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val fav
                 }
                 replyCount.value = newData!!.ReplyCount
                 maxPage.value =
-                    if (replyCount.value % 20 == 0) replyCount.value / 20 else replyCount.value / 20 + 1
+                    if (replyCount.value % 19 == 0) replyCount.value / 19 else replyCount.value / 19 + 1
                 Log.d("能加载的最多页数", maxPage.value.toString())
-                _threadInfo.value = newData.toReplies()
+                Log.d("回复数量", replyCount.value.toString())
+                _threadInfo.value = LinkedHashSet(newData.toReplies())
                 newData.toReplies().map { it.toQuoteRef() }
-                    .forEach { quoteRef -> contentContext[quoteRef.id.toString()] = quoteRef }
-                fid.value = _threadInfo.value!!.get(0).fid!!.toString()
-
+                    .forEach { quoteRef ->
+                        contentContext[quoteRef.id.toString()] = quoteRef
+                        if (quoteRef.id.toInt() == 9999999){
+                            tipsCount.value++
+                        }
+                    }
+                fid.value = _threadInfo.value.firstOrNull()?.fid?.toString() ?: ""
             } catch (e: Exception) {
                 onError.value = true
             }
@@ -171,10 +179,10 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val fav
     }
 
     fun clearThreadInfo() {
-        _threadInfo.value = null
+        _threadInfo.value = LinkedHashSet()
     }
 
-    fun loadMore(direction: String, onComplete: () -> Unit = {}) {
+    fun loadMore(direction: String, onComplete: () -> Unit = {}, addPage: Boolean = true) {
         //向下加载更多数据
         if (direction == "F") {
             if (pageId.value > maxPage.value) {
@@ -182,12 +190,19 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val fav
             } else {
                 canUseRequest.value = true
             }
+            if (!addPage) {
+                canUseRequest.value = true
+            }
             if (canUseRequest.value) {
                 Log.d("thread_page加载第${pageId.value}测试", "触发")
                 isIndicatorVisible.value = true
                 viewModelScope.launch {
-                    pageId.value++
                     try {
+                        if (addPage) {
+                            pageId.value++
+                        } else {
+                            pageId.value--
+                        }
                         val newData = withContext(Dispatchers.IO) {
                             Http_request.getThreadInfo(
                                 "thread?id=${threadId.value}&page=${pageId.value}",
@@ -196,8 +211,13 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val fav
                         }
                         newData?.let {
                             Log.d("新获取的数据", it.toReplies().drop(1).size.toString())
-                            _threadInfo.value =
-                                (_threadInfo.value.orEmpty() + it.toReplies().drop(1))
+                            if (it.toReplies().drop(1).any { reply -> reply.id == 9999999 }) {
+                                tipsCount.value++
+                            }
+                            val updatedThreadInfo = _threadInfo.value.toMutableSet().apply {
+                                addAll(it.toReplies().drop(1))
+                            }
+                            _threadInfo.value = updatedThreadInfo
                             newData.toReplies().map { it.toQuoteRef() }.forEach { quoteRef ->
                                 contentContext[quoteRef.id.toString()] = quoteRef
                             }
@@ -228,11 +248,15 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val fav
                         )
                     }
                     newData?.let {
+                        if (it.toReplies().drop(1).any { reply -> reply.id == 9999999 }) {
+                            tipsCount.value++
+                        }
                         Log.d("新获取的数据", it.toReplies().drop(1).size.toString())
-                        _threadInfo.value =
-                            _threadInfo.value.orEmpty().toMutableList().let { list ->
-                                listOf(list.first()) + it.toReplies().drop(1)
-                            }
+                        _threadInfo.value = _threadInfo.value.orEmpty().let { set ->
+                            val firstElement = set.firstOrNull()
+                            val newReplies = it.toReplies().drop(1)
+                            (listOfNotNull(firstElement) + newReplies).toMutableSet()
+                        }
                         newData.toReplies().map { it.toQuoteRef() }.forEach { quoteRef ->
                             contentContext[quoteRef.id.toString()] = quoteRef
                         }
@@ -255,13 +279,17 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val fav
                         )
                     }
                     newData?.let {
+                        if (it.toReplies().drop(1).any { reply -> reply.id == 9999999 }) {
+                            tipsCount.value++
+                        }
                         Log.d("新获取的数据", it.toReplies().drop(1).size.toString())
-                        _threadInfo.value =
-                            _threadInfo.value.orEmpty().toMutableList().also { list ->
-                                if (list.isNotEmpty()) {
-                                    list.addAll(1, it.toReplies().drop(1))
-                                }
-                            }
+                        val threadInfoList = _threadInfo.value.orEmpty().toMutableList()
+                        if (threadInfoList.isNotEmpty()) {
+                            threadInfoList.addAll(1, it.toReplies().drop(1))
+                        } else {
+                            threadInfoList.addAll(it.toReplies().drop(1))
+                        }
+                        _threadInfo.value = threadInfoList.toMutableSet()
                         newData.toReplies().map { it.toQuoteRef() }.forEach { quoteRef ->
                             contentContext[quoteRef.id.toString()] = quoteRef
                         }
