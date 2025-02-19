@@ -699,7 +699,7 @@ fun TRView(
                                                 .clip(RoundedCornerShape(22.dp)).padding(
                                                     horizontal = 13.dp,
                                                     vertical = 8.dp
-                                                )
+                                                ).animateContentSize()
                                                 .combinedClickable(
                                                     onClick = {
                                                     },

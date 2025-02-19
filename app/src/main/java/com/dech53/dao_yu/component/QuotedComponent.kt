@@ -3,6 +3,7 @@ package com.dech53.dao_yu.component
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -61,7 +62,7 @@ fun QuotedComponent(
                     .padding(all = 5.dp)
                     .clip(RoundedCornerShape(5.dp))
                     .background(MaterialTheme.colorScheme.primary.copy(0.08f))
-
+                    .animateContentSize()
             ) {
                 Column(
                     modifier = Modifier
@@ -132,9 +133,9 @@ fun QuotedComponent(
                 ),
                 fontSize = 14.sp,
                 modifier = Modifier
-                    .padding(start = 12.dp)
+                    .padding(start = 12.dp).offset(y = (-8).dp)
                     .padding(horizontal = 2.dp)
-                    .offset(y = (-9).dp)
+
                     .clickable { isExpanded.value = !isExpanded.value }
             )
         }
