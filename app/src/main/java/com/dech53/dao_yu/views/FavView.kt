@@ -1,9 +1,15 @@
+@file:OptIn(ExperimentalSharedTransitionApi::class)
+
 package com.dech53.dao_yu.views
 
 import android.content.Intent
 import android.util.Log
 import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.BoundsTransform
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -43,6 +49,7 @@ import com.dech53.dao_yu.dao.FavoriteDao
 import com.dech53.dao_yu.static.Url
 import com.dech53.dao_yu.ui.theme.Dao_yuTheme
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -64,6 +71,9 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import coil3.ImageLoader
+import coil3.request.CachePolicy
+import coil3.request.ImageRequest
 import com.dech53.dao_yu.component.ActionIcon
 import com.dech53.dao_yu.viewmodels.MainPage_ViewModel
 import kotlinx.coroutines.delay
@@ -71,7 +81,15 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 @Composable
-fun FavView(padding: PaddingValues, hash: String, viewModel: MainPage_ViewModel) {
+fun FavView(
+    padding: PaddingValues,
+    hash: String,
+    viewModel: MainPage_ViewModel,
+    onImageClick: (String, Int) -> Unit,
+    animatedVisibilityScope: AnimatedVisibilityScope,
+    sharedTransitionScope: SharedTransitionScope,
+    imageLoader: ImageLoader,
+) {
     val data = viewModel.favData.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -89,156 +107,167 @@ fun FavView(padding: PaddingValues, hash: String, viewModel: MainPage_ViewModel)
 //            enter = fadeIn() + slideInHorizontally(),
 //            exit = fadeOut() + slideOutHorizontally()
 //        ) {
-            Box(
-                modifier = Modifier
-                    .padding(padding)
-                    .fillMaxSize()
-            ) {
-                if (data.value.isEmpty()) {
-                    Text(
-                        text = "收藏夹为空",
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                } else {
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
-                        items(data.value, key = { item ->
-                            item.id
-                        }) { item ->
-                            var contextMenuWidth by remember {
-                                mutableFloatStateOf(0f)
-                            }
-                            val offset = remember {
-                                Animatable(initialValue = 0f)
-                            }
-                            Box(
+        Box(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+        ) {
+            if (data.value.isEmpty()) {
+                Text(
+                    text = "收藏夹为空",
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            } else {
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    items(data.value, key = { item ->
+                        item.id
+                    }) { item ->
+                        var contextMenuWidth by remember {
+                            mutableFloatStateOf(0f)
+                        }
+                        val offset = remember {
+                            Animatable(initialValue = 0f)
+                        }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(IntrinsicSize.Min)
+                                .padding(8.dp)
+                                .animateItem(),
+                            contentAlignment = Alignment.CenterStart,
+                        ) {
+                            Row(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(IntrinsicSize.Min)
-                                    .padding(8.dp).animateItem(),
-                                contentAlignment = Alignment.CenterStart,
+                                    .onSizeChanged {
+                                        Log.d("宽度", "${it.width.toFloat()}")
+                                        contextMenuWidth = it.width.toFloat()
+                                    },
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Row(
+                                ActionIcon(
+                                    onClick = {
+                                        scope.launch {
+                                            offset.animateTo(0f)
+                                        }
+                                        val sendIntent: Intent = Intent().apply {
+                                            action = Intent.ACTION_SEND
+                                            putExtra(
+                                                Intent.EXTRA_TEXT,
+                                                Url.Thread_Main_URL + item.id
+                                            )
+                                            flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                            type = "text/plain"
+                                        }
+                                        val shareIntent = Intent.createChooser(sendIntent, null)
+                                        context.startActivity(shareIntent)
+                                    },
+                                    backgroundColor = Color.Blue,
+                                    icon = Icons.Default.Share,
                                     modifier = Modifier
-                                        .onSizeChanged {
-                                            Log.d("宽度", "${it.width.toFloat()}")
-                                            contextMenuWidth = it.width.toFloat()
-                                        },
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    ActionIcon(
-                                        onClick = {
-                                            scope.launch {
-                                                offset.animateTo(0f)
-                                            }
-                                            val sendIntent: Intent = Intent().apply {
-                                                action = Intent.ACTION_SEND
-                                                putExtra(
-                                                    Intent.EXTRA_TEXT,
-                                                    Url.Thread_Main_URL + item.id
-                                                )
-                                                flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
-                                                type = "text/plain"
-                                            }
-                                            val shareIntent = Intent.createChooser(sendIntent, null)
-                                            context.startActivity(shareIntent)
-                                        },
-                                        backgroundColor = Color.Blue,
-                                        icon = Icons.Default.Share,
-                                        modifier = Modifier
-                                            .size(48.dp)
-                                            .clip(CircleShape),
-                                        contentDescription = "分享"
-                                    )
-                                    ActionIcon(
-                                        onClick = {
-                                            scope.launch {
-                                                offset.animateTo(0f)
-                                                viewModel.deleteFav(item)
-                                            }
-                                        },
-                                        backgroundColor = Color.Red,
-                                        icon = Icons.Default.Delete,
-                                        modifier = Modifier
-                                            .size(48.dp)
-                                            .clip(CircleShape),
-                                        contentDescription = "删除"
-                                    )
-                                }
-                                Card(
+                                        .size(48.dp)
+                                        .clip(CircleShape),
+                                    contentDescription = "分享"
+                                )
+                                ActionIcon(
+                                    onClick = {
+                                        scope.launch {
+                                            offset.animateTo(0f)
+                                            viewModel.deleteFav(item)
+                                        }
+                                    },
+                                    backgroundColor = Color.Red,
+                                    icon = Icons.Default.Delete,
                                     modifier = Modifier
-                                        .fillMaxSize()
-                                        .offset { IntOffset(offset.value.roundToInt(), 0) }
-                                        .clip(MaterialTheme.shapes.small)
-                                        //检测拖拽行为
-                                        .pointerInput(true) {
-                                            detectHorizontalDragGestures(
-                                                onHorizontalDrag = { _, dragAmount ->
-                                                    scope.launch {
-                                                        val newOffset = (offset.value + dragAmount)
-                                                            .coerceIn(0f, contextMenuWidth)
-                                                        offset.snapTo(newOffset)
-                                                    }
-                                                },
-                                                onDragEnd = {
-                                                    when {
-                                                        offset.value >= contextMenuWidth / 2f -> {
-                                                            scope.launch {
-                                                                offset.animateTo(contextMenuWidth)
-                                                            }
+                                        .size(48.dp)
+                                        .clip(CircleShape),
+                                    contentDescription = "删除"
+                                )
+                            }
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .offset { IntOffset(offset.value.roundToInt(), 0) }
+                                    .clip(MaterialTheme.shapes.small)
+                                    //检测拖拽行为
+                                    .pointerInput(true) {
+                                        detectHorizontalDragGestures(
+                                            onHorizontalDrag = { _, dragAmount ->
+                                                scope.launch {
+                                                    val newOffset = (offset.value + dragAmount)
+                                                        .coerceIn(0f, contextMenuWidth)
+                                                    offset.snapTo(newOffset)
+                                                }
+                                            },
+                                            onDragEnd = {
+                                                when {
+                                                    offset.value >= contextMenuWidth / 2f -> {
+                                                        scope.launch {
+                                                            offset.animateTo(contextMenuWidth)
                                                         }
+                                                    }
 
-                                                        else -> {
-                                                            scope.launch {
-                                                                offset.animateTo(0f)
-                                                            }
+                                                    else -> {
+                                                        scope.launch {
+                                                            offset.animateTo(0f)
                                                         }
                                                     }
                                                 }
-                                            )
-                                        },
-                                    shape = MaterialTheme.shapes.small,
-                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
-                                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                                        contentColor = MaterialTheme.colorScheme.onSurface
-                                    ),
-                                    onClick = {
-                                        val intent = Intent(context, ThreadAndReplyView::class.java)
-                                        intent.putExtra("threadId", item.id.toString())
-                                        intent.putExtra("hash", hash)
-                                        intent.putExtra("hasId", true)
-                                        context.startActivity(intent)
-                                    }
+                                            }
+                                        )
+                                    },
+                                shape = MaterialTheme.shapes.small,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+                                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                    contentColor = MaterialTheme.colorScheme.onSurface
+                                ),
+                                onClick = {
+                                    val intent = Intent(context, ThreadAndReplyView::class.java)
+                                    intent.putExtra("threadId", item.id.toString())
+                                    intent.putExtra("hash", hash)
+                                    intent.putExtra("hasId", true)
+                                    context.startActivity(intent)
+                                }
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp)
                                 ) {
-                                    Column(
-                                        modifier = Modifier.padding(16.dp)
-                                    ) {
-                                        Text(
-                                            text = "No.${item.id}",
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                        Spacer(modifier = Modifier.height(6.dp))
-                                        CommonHtmlText(
-                                            htmlContent = item.content,
-                                            maxLines = 6
-                                        )
-                                        Spacer(modifier = Modifier.height(10.dp))
-                                        if (item.img != "") {
+                                    Text(
+                                        text = "No.${item.id}",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    CommonHtmlText(
+                                        htmlContent = item.content,
+                                        maxLines = 6
+                                    )
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    if (item.img != "") {
+                                        with(sharedTransitionScope) {
                                             AsyncImage(
-                                                model = Url.IMG_THUMB_QA + item.img,
+                                                model = ImageRequest.Builder(context)
+                                                    .data(Url.IMG_THUMB_QA + item.img)
+                                                    .memoryCachePolicy(CachePolicy.ENABLED)
+                                                    .diskCachePolicy(CachePolicy.ENABLED)
+                                                    .placeholderMemoryCacheKey(key = "${item.id}image/${item.img}false")
+                                                    .memoryCacheKey(key = "${item.id}image/${item.img}false")
+                                                    .build(),
                                                 contentDescription = "img${item.id}",
                                                 modifier = Modifier
                                                     .width(100.dp)
                                                     .clip(RoundedCornerShape(4.dp))
                                                     .clickable {
-                                                        val intent =
-                                                            Intent(context, ImageViewer::class.java)
-                                                        intent.putExtra("imgName", item.img)
-                                                        context.startActivity(intent)
-                                                    },
+                                                        onImageClick(item.img, item.id.toInt())
+                                                    }.sharedElement(
+                                                        rememberSharedContentState(key = "${item.id}image/${item.img}"),
+                                                        animatedVisibilityScope = animatedVisibilityScope,
+                                                        boundsTransform = BoundsTransform { initialBounds, targetBounds ->
+                                                            tween(durationMillis = 200)
+                                                        }
+                                                    ),
                                                 contentScale = ContentScale.Crop
                                             )
                                         }
@@ -249,6 +278,7 @@ fun FavView(padding: PaddingValues, hash: String, viewModel: MainPage_ViewModel)
                     }
                 }
             }
+        }
 //        }
     }
 }

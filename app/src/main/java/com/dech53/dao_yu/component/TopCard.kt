@@ -1,6 +1,13 @@
+@file:OptIn(ExperimentalSharedTransitionApi::class)
+
 package com.dech53.dao_yu.component
 
 import android.util.Log
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.BoundsTransform
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -69,7 +76,7 @@ import com.dech53.dao_yu.viewmodels.MainPage_ViewModel
 @Composable
 fun Forum_card(
     thread: Thread,
-    imgClickAction: () -> Unit,
+    imgClickAction: (String,Int) -> Unit,
     cardClickAction: () -> Unit,
     cardLongClickAction: (String) -> Unit,
     stricted: Boolean,
@@ -79,7 +86,10 @@ fun Forum_card(
     forumCategoryId: String,
     favClickAction: (Boolean) -> Unit,
     viewModel: MainPage_ViewModel,
-    isFaved:Boolean
+    isFaved:Boolean,
+    imageLoader:ImageLoader,
+    animatedVisibilityScope: AnimatedVisibilityScope,
+    sharedTransitionScope: SharedTransitionScope
 ) {
     val dateRegex = Regex(pattern = "[^(]*|(?<=\\))[^)]*")
     val replace_ = Regex(pattern = "-")
@@ -107,25 +117,10 @@ fun Forum_card(
             .data(Url.IMG_THUMB_QA + thread.img + thread.ext)
             .memoryCachePolicy(CachePolicy.ENABLED)
             .diskCachePolicy(CachePolicy.ENABLED)
+            .placeholderMemoryCacheKey(key = "${thread.id}image/${thread.img}${thread.ext}false")
+            .memoryCacheKey(key = "${thread.id}image/${thread.img}${thread.ext}false")
             .build()
     }
-    val imageLoader = remember {
-        ImageLoader.Builder(context)
-            .memoryCache {
-                MemoryCache.Builder()
-                    .maxSizePercent(context, 0.25)
-                    .build()
-            }
-            .diskCache {
-                DiskCache.Builder()
-                    .directory(context.cacheDir.resolve("image_cache"))
-                    .maxSizePercent(0.2)
-                    .build()
-            }
-            .crossfade(true)
-            .build()
-    }
-
     LaunchedEffect(Unit) {
         if (thread.img != "") {
             val imageUrl = Url.IMG_THUMB_QA + thread.img + thread.ext
@@ -249,27 +244,35 @@ fun Forum_card(
 
             if (thread.img != "") {
                 Spacer(modifier = Modifier.height(10.dp))
-                SubcomposeAsyncImage(
-                    imageLoader = imageLoader,
-                    model = request,
-                    contentDescription = null,
-                    loading = {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth(0.5f)
-                                .height(imageHeight.dp)
-                                .shimmerEffect()
-                        ) {
-                        }
-                    },
-                    modifier = Modifier
-                        .size(width = imageWidth.dp, height = imageHeight.dp)
-                        .clickable {
-                            imgClickAction()
+                with(sharedTransitionScope) {
+                    SubcomposeAsyncImage(
+                        imageLoader = imageLoader,
+                        model = request,
+                        contentDescription = null,
+                        loading = {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(0.5f)
+                                    .height(imageHeight.dp)
+                                    .shimmerEffect()
+                            ) {
+                            }
                         },
-                    contentScale = ContentScale.Fit,
-                    alignment = Alignment.CenterStart
-                )
+                        modifier = Modifier
+                            .size(width = imageWidth.dp, height = imageHeight.dp)
+                            .clickable {
+                                imgClickAction(thread.img + thread.ext, thread.id)
+                            }.sharedElement(
+                                rememberSharedContentState(key = "${thread.id}image/${thread.img}${thread.ext}"),
+                                animatedVisibilityScope = animatedVisibilityScope,
+                                boundsTransform = BoundsTransform { initialBounds, targetBounds ->
+                                    tween(durationMillis = 200)
+                                }
+                            ),
+                        contentScale = ContentScale.Fit,
+                        alignment = Alignment.CenterStart
+                    )
+                }
             }
             if ((mainForumId in listOf("1", "2", "3")) && forumCategoryId == "999") {
                 Box(

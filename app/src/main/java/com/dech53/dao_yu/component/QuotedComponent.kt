@@ -57,14 +57,16 @@ fun QuotedComponent(
 
         ) {
             Box(
-                modifier = Modifier.clip(RoundedCornerShape(5.dp))
-                    .background(MaterialTheme.colorScheme.primary.copy(0.08f))
+                modifier = Modifier
                     .padding(all = 5.dp)
+                    .clip(RoundedCornerShape(5.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(0.08f))
+
             ) {
                 Column(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(top = 2.dp).padding(horizontal = 5.dp)
+                        .padding(top = 2.dp)
+                        .padding(horizontal = 5.dp).fillMaxSize()
                 ) {
                     if (quoteRef.user_hash != "") {
                         Row(
@@ -109,7 +111,7 @@ fun QuotedComponent(
                                 }
                         )
                     }
-                    if (quoteRef.isThread){
+                    if (quoteRef.isThread) {
                         TextButton(onClick = {
                             val intent = Intent(context, ThreadAndReplyView::class.java)
                             intent.putExtra("threadId", quoteRef.id.toString())
@@ -131,8 +133,8 @@ fun QuotedComponent(
                 fontSize = 14.sp,
                 modifier = Modifier
                     .padding(start = 12.dp)
-                    .offset(y = (-9).dp)
                     .padding(horizontal = 2.dp)
+                    .offset(y = (-9).dp)
                     .clickable { isExpanded.value = !isExpanded.value }
             )
         }
@@ -144,8 +146,8 @@ fun QuotedComponent(
             style = MaterialTheme.typography.labelSmall,
             modifier = Modifier
                 .clickable {
-                isExpanded.value = !isExpanded.value
-            }
+                    isExpanded.value = !isExpanded.value
+                }
         )
     }
 }

@@ -161,7 +161,7 @@ fun HtmlTRText(
                     style = textStyle,
                     fontSize = fontSize,
                     maxLines = maxLines,
-                    modifier = Modifier.animateContentSize()
+                    modifier = Modifier
                 )
             }
         }

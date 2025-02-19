@@ -1,6 +1,9 @@
+@file:OptIn(ExperimentalSharedTransitionApi::class)
+
 package com.dech53.dao_yu
 
 import android.content.Intent
+import android.os.Build.VERSION.SDK_INT
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -8,9 +11,21 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -61,9 +76,20 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import coil3.ImageLoader
+import coil3.disk.DiskCache
+import coil3.disk.directory
+import coil3.gif.AnimatedImageDecoder
+import coil3.gif.GifDecoder
+import coil3.memory.MemoryCache
+import coil3.network.okhttp.OkHttpNetworkFetcherFactory
+import coil3.request.crossfade
 import com.dech53.dao_yu.component.ForumCategoryDialog
 import com.dech53.dao_yu.component.MainButtonItems
 import com.dech53.dao_yu.component.PullToRefreshLazyColumn
@@ -81,6 +107,7 @@ import com.dech53.dao_yu.static.forumMap
 import com.dech53.dao_yu.viewmodels.MainPage_ViewModel
 import com.dech53.dao_yu.views.ChartView
 import com.dech53.dao_yu.views.FavView
+import com.dech53.dao_yu.views.ImageView
 import com.dech53.dao_yu.views.SettingsView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -88,6 +115,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
 
 class MainActivity : ComponentActivity() {
     private val scope = CoroutineScope(Dispatchers.IO)
@@ -137,6 +165,10 @@ fun Main_Page(
     padding: PaddingValues,
     viewModel: MainPage_ViewModel,
     cookie: Cookie?,
+    imageLoader: ImageLoader,
+    onImageClick: (String, Int) -> Unit,
+    animatedVisibilityScope: AnimatedVisibilityScope,
+    sharedTransitionScope: SharedTransitionScope
 ) {
     val dataState = viewModel.dataState
     val isRefreshing by remember { viewModel.isRefreshing }
@@ -146,13 +178,6 @@ fun Main_Page(
     val context = LocalContext.current
     val onError by remember { viewModel.onError }
     val scope = rememberCoroutineScope()
-    LaunchedEffect(Unit) {
-        scope.launch {
-            withContext(Dispatchers.Main) {
-                lazyListState.scrollToItem(0)
-            }
-        }
-    }
 
 //    LaunchedEffect(Unit) {
 //        snapshotFlow { dataState.size }
@@ -207,10 +232,8 @@ fun Main_Page(
                         content = { item ->
                             Forum_card(
                                 thread = item,
-                                imgClickAction = {
-                                    val intent = Intent(context, ImageViewer::class.java)
-                                    intent.putExtra("imgName", item.img + item.ext)
-                                    context.startActivity(intent)
+                                imgClickAction = { name, id ->
+                                    onImageClick(name, id)
                                 },
                                 cardClickAction = {
                                     Log.d("外部单点", "${item}")
@@ -275,7 +298,10 @@ fun Main_Page(
                                 viewModel = viewModel,
                                 isFaved = favorites.any {
                                     it.id == item.id.toString()
-                                }
+                                },
+                                animatedVisibilityScope = animatedVisibilityScope,
+                                sharedTransitionScope = sharedTransitionScope,
+                                imageLoader = imageLoader
                             )
                         },
                         isRefreshing = isRefreshing,
@@ -310,6 +336,10 @@ fun Main_Screen(viewModel: MainPage_ViewModel, cookie: Cookie?) {
     var selectedItemIndex by rememberSaveable { mutableIntStateOf(0) }
     //navigation action
     val navController = rememberNavController()
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+    val isImageScreen = currentRoute?.startsWith("image/") == true
+
 
     val title by remember { viewModel.title }
     LaunchedEffect(true) {
@@ -321,12 +351,43 @@ fun Main_Screen(viewModel: MainPage_ViewModel, cookie: Cookie?) {
     }
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-
+    val topBottomVisible = remember { mutableStateOf(true) }
     val nowForumId by remember { viewModel.forumId }
     var isForumChooseExpanded by remember { mutableStateOf(false) }
     var isCookieChooseExpanded by remember { mutableStateOf(false) }
     var showBottomSheet by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val imageLoader = remember {
+        ImageLoader.Builder(context)
+            .memoryCache {
+                MemoryCache.Builder()
+                    .maxSizePercent(context, 0.25)
+                    .build()
+            }
+            .diskCache {
+                DiskCache.Builder()
+                    .directory(context.cacheDir.resolve("image_cache"))
+                    .maxSizePercent(0.2)
+                    .build()
+            }
+            .components {
+                add(
+                    OkHttpNetworkFetcherFactory(
+                        callFactory = {
+                            OkHttpClient()
+                        }
+                    )
+                )
+                if (SDK_INT >= 28) {
+                    add(AnimatedImageDecoder.Factory())
+                } else {
+                    add(GifDecoder.Factory())
+                }
+            }
+            .crossfade(true)
+            .build()
+    }
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
@@ -386,82 +447,88 @@ fun Main_Screen(viewModel: MainPage_ViewModel, cookie: Cookie?) {
     ) {
         Scaffold(
             floatingActionButton = {
-                if (!(title in listOf("收藏", "设置", "统计"))) {
-                    FloatingActionButton(
-                        onClick = {
-                            showBottomSheet = !showBottomSheet
-                            Log.d("悬浮按钮点击", "触发")
-                        },
-                    ) {
-                        Icon(
-                            imageVector = ImageVector.vectorResource(id = R.drawable.baseline_create_24),
-                            contentDescription = "Back",
-                        )
+                if (!isImageScreen) {
+                    if (!(title in listOf("收藏", "设置", "统计"))) {
+                        FloatingActionButton(
+                            onClick = {
+                                showBottomSheet = !showBottomSheet
+                                Log.d("悬浮按钮点击", "触发")
+                            },
+                        ) {
+                            Icon(
+                                imageVector = ImageVector.vectorResource(id = R.drawable.baseline_create_24),
+                                contentDescription = "Back",
+                            )
+                        }
                     }
                 }
             },
             topBar = {
-                @OptIn(ExperimentalMaterial3Api::class)
-                TopAppBar(
-                    modifier = Modifier.shadow(elevation = 10.dp),
-                    title = { Text(text = title) },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        titleContentColor = MaterialTheme.colorScheme.primary,
-                    ),
-                    navigationIcon = {
-                        if (!(title in listOf("收藏", "设置", "统计"))) {
-                            IconButton(onClick = {
-                                //TODO change the request forum id
-                                scope.launch(Dispatchers.IO) {
-                                    drawerState.apply {
-                                        if (isClosed) open() else close()
+                if (!isImageScreen)
+                    @OptIn(ExperimentalMaterial3Api::class)
+                    TopAppBar(
+                        modifier = Modifier
+                            .shadow(elevation = 10.dp),
+                        title = { Text(text = title) },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            titleContentColor = MaterialTheme.colorScheme.primary,
+                        ),
+                        navigationIcon = {
+                            if (!(title in listOf("收藏", "设置", "统计"))) {
+                                IconButton(onClick = {
+                                    //TODO change the request forum id
+                                    scope.launch(Dispatchers.IO) {
+                                        drawerState.apply {
+                                            if (isClosed) open() else close()
+                                        }
                                     }
-                                }
-                            }) {
-                                Icon(
-                                    imageVector = ImageVector.vectorResource(id = R.drawable.baseline_sync_alt_24),
-                                    contentDescription = "Back",
-                                )
-                            }
-                        }
-                    },
-                )
-            },
-            bottomBar = {
-                NavigationBar {
-                    MainButtonItems.forEachIndexed { index, item ->
-                        NavigationBarItem(
-                            selected = selectedItemIndex == index,
-                            onClick = {
-                                selectedItemIndex = index
-                                navController.navigate(item.title)
-                                if (index == 0) {
-                                    viewModel.changeTitle(forumCategories.flatMap { it.forums }
-                                        .find { it.id == nowForumId }!!.name)
-                                } else {
-                                    viewModel.changeTitle(item.title)
-                                }
-                            },
-                            label = {
-                                Text(text = item.title)
-                            },
-                            alwaysShowLabel = true,
-                            icon = {
-                                BadgedBox(
-                                    badge = {
-                                    }
-                                ) {
+                                }) {
                                     Icon(
-                                        painter = painterResource(if (selectedItemIndex == index) item.selectedIcon else item.unselectedIcon),
-                                        contentDescription = item.title,
-                                        modifier = Modifier.animateContentSize()
+                                        imageVector = ImageVector.vectorResource(id = R.drawable.baseline_sync_alt_24),
+                                        contentDescription = "Back",
                                     )
                                 }
                             }
-                        )
+                        },
+                    )
+            },
+            bottomBar = {
+                if (!isImageScreen)
+                    NavigationBar(
+                    ) {
+                        MainButtonItems.forEachIndexed { index, item ->
+                            NavigationBarItem(
+                                selected = selectedItemIndex == index,
+                                onClick = {
+                                    selectedItemIndex = index
+                                    navController.navigate(item.title)
+                                    if (index == 0) {
+                                        viewModel.changeTitle(forumCategories.flatMap { it.forums }
+                                            .find { it.id == nowForumId }!!.name)
+                                    } else {
+                                        viewModel.changeTitle(item.title)
+                                    }
+                                },
+                                label = {
+                                    Text(text = item.title)
+                                },
+                                alwaysShowLabel = true,
+                                icon = {
+                                    BadgedBox(
+                                        badge = {
+                                        }
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(if (selectedItemIndex == index) item.selectedIcon else item.unselectedIcon),
+                                            contentDescription = item.title,
+                                            modifier = Modifier.animateContentSize()
+                                        )
+                                    }
+                                }
+                            )
+                        }
                     }
-                }
             }
         ) { innerPadding ->
             if (showBottomSheet) {
@@ -525,31 +592,72 @@ fun Main_Screen(viewModel: MainPage_ViewModel, cookie: Cookie?) {
                 }
             }
             //navigation route
-            NavHost(
-                navController = navController,
-                startDestination = "主页",
-                enterTransition = { EnterTransition.None },
-                exitTransition = { ExitTransition.None },
-                popEnterTransition = {EnterTransition.None },
-                popExitTransition = { ExitTransition.None },
-            ) {
-                composable("主页") {
-                    Main_Page(
-                        padding = innerPadding,
-                        viewModel = viewModel,
-                        cookie = cookie,
-                    )
-                }
-                composable("设置") { SettingsView(padding = innerPadding) }
-                composable("收藏") {
-                    FavView(
-                        padding = innerPadding,
-                        viewModel.cookie.value?.cookie ?: "",
-                        viewModel = viewModel
-                    )
-                }
-                composable("统计") {
-                    ChartView(padding = innerPadding)
+            SharedTransitionLayout {
+                NavHost(
+                    navController = navController,
+                    startDestination = "主页",
+                ) {
+                    composable("主页") {
+                        Main_Page(
+                            padding = innerPadding,
+                            viewModel = viewModel,
+                            cookie = cookie,
+                            onImageClick = { name, id ->
+                                topBottomVisible.value = false
+                                navController.navigate("image/$name/$id")
+                            },
+                            animatedVisibilityScope = this,
+                            sharedTransitionScope = this@SharedTransitionLayout,
+                            imageLoader = imageLoader
+                        )
+                    }
+                    composable("设置") { SettingsView(padding = innerPadding) }
+                    composable("收藏") {
+                        FavView(
+                            padding = innerPadding,
+                            viewModel.cookie.value?.cookie ?: "",
+                            viewModel = viewModel,
+                            onImageClick = { name, id ->
+                                topBottomVisible.value = false
+                                navController.navigate("image/$name/$id")
+                            },
+                            animatedVisibilityScope = this,
+                            sharedTransitionScope = this@SharedTransitionLayout,
+                            imageLoader = imageLoader
+                        )
+                    }
+                    composable("统计") {
+                        ChartView(padding = innerPadding)
+                    }
+                    composable(
+                        "image/{date}/{name}/{id}", arguments = listOf(
+                            navArgument("date") {
+                                type = NavType.StringType
+                            },
+                            navArgument("name") {
+                                type = NavType.StringType
+                            },
+                            navArgument("id") {
+                                type = NavType.IntType
+                            },
+                        )
+                    ) {
+                        val date = it.arguments?.getString("date") ?: ""
+                        val name = it.arguments?.getString("name") ?: ""
+                        val id = it.arguments?.getInt("id") ?: 0
+                        Log.d("name", date + name)
+                        ImageView(
+                            imgName = date + "/" + name,
+                            replyId = id,
+                            quitClick = {
+                                topBottomVisible.value = true
+                                navController.popBackStack()
+                            },
+                            imageLoader = imageLoader,
+                            animatedVisibilityScope = this,
+                            sharedTransitionScope = this@SharedTransitionLayout
+                        )
+                    }
                 }
             }
         }

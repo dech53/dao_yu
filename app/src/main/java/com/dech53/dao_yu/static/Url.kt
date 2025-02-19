@@ -1,5 +1,6 @@
 package com.dech53.dao_yu.static
 
+import coil3.ImageLoader
 import com.dech53.dao_yu.models.Cookie
 
 object Url {
@@ -9,4 +10,5 @@ object Url {
     const val Thread_Main_URL = "https://www.nmbxd1.com/t/"
     const val Post_Thread_URL = "https://www.nmbxd.com/home/forum/doPostThread.html"
     const val Reply_Thread_URL = "https://www.nmbxd.com/home/forum/doReplyThread.html"
+
 }

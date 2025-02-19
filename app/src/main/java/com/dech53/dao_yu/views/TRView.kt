@@ -12,10 +12,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.BoundsTransform
 import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -24,7 +26,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -39,7 +40,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -78,7 +78,6 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import com.dech53.dao_yu.component.ShimmerList
 import com.dech53.dao_yu.component.SkeletonCard
-import com.dech53.dao_yu.component.TRCard
 import androidx.compose.runtime.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -95,15 +94,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.navigation.compose.rememberNavController
 import coil3.ImageLoader
 import coil3.compose.SubcomposeAsyncImage
-import coil3.disk.DiskCache
-import coil3.disk.directory
-import coil3.memory.MemoryCache
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
-import coil3.request.crossfade
 import coil3.toBitmap
 import com.dech53.dao_yu.R
 import com.dech53.dao_yu.component.HtmlTRText
@@ -118,26 +112,28 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import androidx.compose.runtime.*
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.rememberNestedScrollInteropConnection
 import androidx.compose.ui.res.painterResource
 import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
 import com.dech53.dao_yu.component.CustomExposedDropMenu
 import com.dech53.dao_yu.static.xDaoPhrases
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SharedTransitionScope.TRView(
+fun TRView(
     viewModel: ThreadInfoView_ViewModel,
     threadId: String,
     changeState: (Boolean) -> Unit,
-    onImageClick: (String) -> Unit,
+    onImageClick: (String,Int) -> Unit,
+    backAction:()->Unit,
+    imageLoader: ImageLoader,
     animatedVisibilityScope: AnimatedVisibilityScope,
-    backAction:()->Unit
+    sharedTransitionScope: SharedTransitionScope
 ) {
     var showBottomSheet by remember { mutableStateOf(false) }
     val lazyListState = rememberLazyListState()
@@ -537,9 +533,9 @@ fun SharedTransitionScope.TRView(
 //                                ) {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(3),
-                    modifier = Modifier
+                    modifier = Modifier.fillMaxSize()
                         .padding(8.dp)
-                        .fillMaxSize(),
+                        ,
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -670,22 +666,7 @@ fun SharedTransitionScope.TRView(
                                                 .diskCachePolicy(CachePolicy.ENABLED)
                                                 .build()
                                         }
-                                        val imageLoader = remember {
-                                            ImageLoader.Builder(context)
-                                                .memoryCache {
-                                                    MemoryCache.Builder()
-                                                        .maxSizePercent(context, 0.25)
-                                                        .build()
-                                                }
-                                                .diskCache {
-                                                    DiskCache.Builder()
-                                                        .directory(context.cacheDir.resolve("image_cache"))
-                                                        .maxSizePercent(0.2)
-                                                        .build()
-                                                }
-                                                .crossfade(true)
-                                                .build()
-                                        }
+
                                         LaunchedEffect(viewModel.isRaw.value) {
                                             if (reply.img != "") {
                                                 if (!viewModel.imgList.containsKey(imageUrl)) {
@@ -701,7 +682,6 @@ fun SharedTransitionScope.TRView(
                                                 }
                                             }
                                         }
-
                                         val imageModifier = if (viewModel.isRaw.value) {
                                             Modifier.aspectRatio(imageWidth.toFloat() / imageHeight.toFloat())
                                         } else {
@@ -710,19 +690,16 @@ fun SharedTransitionScope.TRView(
                                                 height = imageHeight.dp
                                             )
                                         }
-
                                         Card(
                                             colors = CardDefaults.cardColors(
                                                 containerColor = MaterialTheme.colorScheme.surfaceContainer,
                                                 contentColor = MaterialTheme.colorScheme.onSurface
                                             ),
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(22.dp))
-                                                .padding(
+                                            modifier = Modifier.fillMaxWidth()
+                                                .clip(RoundedCornerShape(22.dp)).padding(
                                                     horizontal = 13.dp,
                                                     vertical = 8.dp
                                                 )
-                                                .fillMaxWidth()
                                                 .combinedClickable(
                                                     onClick = {
                                                     },
@@ -734,7 +711,6 @@ fun SharedTransitionScope.TRView(
                                                         viewModel.appendToTextField(">>No.${reply.id}\n")
                                                     }
                                                 )
-                                                .animateContentSize()
                                         ) {
                                             Log.d(
                                                 "是否重组",
@@ -768,16 +744,17 @@ fun SharedTransitionScope.TRView(
                                                                 modifier = Modifier
                                                                     .width(30.dp)
                                                                     .height(IntrinsicSize.Min)
+                                                                    .padding(
+                                                                        horizontal = 3.dp,
+                                                                        vertical = 1.dp
+                                                                    )
                                                                     .background(
                                                                         color = MaterialTheme.colorScheme.primary.copy(
                                                                             alpha = 0.5f
                                                                         ),
                                                                         shape = capsuleShape
                                                                     )
-                                                                    .padding(
-                                                                        horizontal = 3.dp,
-                                                                        vertical = 1.dp
-                                                                    )
+
                                                             ) {
                                                                 Text(
                                                                     text = "Po",
@@ -852,42 +829,76 @@ fun SharedTransitionScope.TRView(
                                                     context = context,
                                                     posterName = poster,
                                                 )
-                                                key(imageInfo) {
-                                                    if (reply.img != "") {
-                                                        SubcomposeAsyncImage(
-                                                            imageLoader = imageLoader,
-                                                            model = request,
-                                                            contentDescription = null,
-                                                            loading = {
-                                                                Box(
-                                                                    modifier = Modifier
-                                                                        .fillMaxWidth(0.5f)
-                                                                        .height(imageHeight.dp)
-                                                                        .shimmerEffect()
-                                                                ) {
-                                                                }
-                                                            },
-                                                            modifier = imageModifier
-                                                                .clickable(
-                                                                    indication = rememberRipple(
-                                                                        bounded = true
-                                                                    ),
-                                                                    interactionSource = remember { MutableInteractionSource() }
-                                                                ) {
-                                                                    onImageClick(reply.img + reply.ext)
-                                                                }
-                                                                .sharedElement(
-                                                                    state = rememberSharedContentState(
-                                                                        key = "image/${reply.img}${reply.ext}"
-                                                                    ),
-                                                                    animatedVisibilityScope,
-                                                                    boundsTransform = BoundsTransform { initialBounds, targetBounds ->
-                                                                        tween(durationMillis = 200)
+                                                with(sharedTransitionScope) {
+                                                    key(imageInfo) {
+                                                        if (reply.img != "") {
+                                                            SubcomposeAsyncImage(
+                                                                imageLoader = imageLoader,
+                                                                model = ImageRequest.Builder(context)
+                                                                    .data(imageUrl)
+                                                                    .memoryCachePolicy(CachePolicy.ENABLED)
+                                                                    .diskCachePolicy(CachePolicy.ENABLED)
+                                                                    .placeholderMemoryCacheKey(key = "${reply.id}image/${reply.img}${reply.ext}${viewModel.isRaw.value}")
+                                                                    .memoryCacheKey(key = "${reply.id}image/${reply.img}${reply.ext}${viewModel.isRaw.value}")
+                                                                    .build(),
+                                                                contentDescription = null,
+                                                                contentScale = ContentScale.Fit,
+                                                                alignment = Alignment.CenterStart,
+                                                                modifier = Modifier
+                                                                    .clickable(
+                                                                        indication = rememberRipple(
+                                                                            bounded = true
+                                                                        ),
+                                                                        interactionSource = remember { MutableInteractionSource() }
+                                                                    ) {
+                                                                        onImageClick(
+                                                                            reply.img + reply.ext,
+                                                                            reply.id
+                                                                        )
                                                                     }
-                                                                ),
-                                                            contentScale = ContentScale.Fit,
-                                                            alignment = Alignment.CenterStart
-                                                        )
+                                                            ) {
+                                                                val painter =
+                                                                    this@SubcomposeAsyncImage.painter
+                                                                val state by painter.state.collectAsState()
+
+                                                                when (state) {
+                                                                    AsyncImagePainter.State.Empty -> {}
+                                                                    is AsyncImagePainter.State.Error -> {
+                                                                        Box(
+                                                                            modifier = Modifier.fillMaxSize(),
+                                                                            contentAlignment = Alignment.Center
+                                                                        ) {
+                                                                            Text("加载失败")
+                                                                        }
+                                                                    }
+                                                                    is AsyncImagePainter.State.Loading -> {
+                                                                        Box(
+                                                                            modifier = Modifier.fillMaxSize(),
+                                                                            contentAlignment = Alignment.Center
+                                                                        ) {
+                                                                            CircularProgressIndicator(
+                                                                                color = MaterialTheme.colorScheme.primary
+                                                                            )
+                                                                        }
+                                                                    }
+                                                                    is AsyncImagePainter.State.Success -> {
+                                                                        Image(
+                                                                            painter = painter,
+                                                                            contentDescription = null,
+                                                                            modifier = imageModifier.sharedElement(
+                                                                                state = rememberSharedContentState(
+                                                                                    key = "${reply.id}image/${reply.img}${reply.ext}"),
+                                                                                animatedVisibilityScope = animatedVisibilityScope,
+                                                                                boundsTransform = BoundsTransform { initialBounds, targetBounds ->
+                                                                                    tween(durationMillis = 200)
+                                                                                }
+                                                                            ),
+                                                                            contentScale = ContentScale.Fit
+                                                                        )
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
                                                     }
                                                 }
                                             }
