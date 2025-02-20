@@ -132,8 +132,7 @@ fun FavView(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(IntrinsicSize.Min)
-                                .padding(8.dp)
-                                .animateItem(),
+                                .padding(8.dp),
                             contentAlignment = Alignment.CenterStart,
                         ) {
                             Row(
@@ -248,6 +247,7 @@ fun FavView(
                                     if (item.img != "") {
                                         with(sharedTransitionScope) {
                                             AsyncImage(
+                                                imageLoader = imageLoader,
                                                 model = ImageRequest.Builder(context)
                                                     .data(Url.IMG_THUMB_QA + item.img)
                                                     .memoryCachePolicy(CachePolicy.ENABLED)

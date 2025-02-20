@@ -67,15 +67,11 @@ class CookieManage : ComponentActivity() {
         factoryProducer = {
             object : ViewModelProvider.Factory {
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return CookieViewModel(db.cookieDao) as T
+                    return CookieViewModel() as T
                 }
             }
         }
     )
-
-    private val db by lazy {
-        CookieDatabase.getDatabase(applicationContext)
-    }
 
     //拉起相机
     private val qrCodeLanuncher = registerForActivityResult(ScanContract()) { result ->

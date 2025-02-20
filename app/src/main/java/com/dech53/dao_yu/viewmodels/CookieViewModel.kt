@@ -9,10 +9,12 @@ import com.dech53.dao_yu.static.CookieState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 
 
 class CookieViewModel(
-    private val cookieDao: CookieDao
+    private val cookieDao: CookieDao = Injekt.get()
 ) : ViewModel() {
     val state = MutableStateFlow(CookieState())
 

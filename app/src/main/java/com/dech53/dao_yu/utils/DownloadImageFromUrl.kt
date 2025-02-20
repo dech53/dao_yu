@@ -32,12 +32,15 @@ object DownloadImageFromUrl {
             fileDir.mkdirs()
         }
         // file path composed
-        val file = File(fileDir, Regex(pattern = "&").replace(url, "-"))
-        //output stream write the img into the pointed dir
-        val outputStream: OutputStream = FileOutputStream(file)
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-        outputStream.flush()
-        outputStream.close()
-        return file.absolutePath
+        val file = File(fileDir, Regex(pattern = "/").replace(url, "-"))
+        if (file.exists()){
+            return file.absolutePath
+        }else{//output stream write the img into the pointed dir
+            val outputStream: OutputStream = FileOutputStream(file,true)
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+            outputStream.flush()
+            outputStream.close()
+            return file.absolutePath
+        }
     }
 }

@@ -45,6 +45,8 @@ import com.dech53.dao_yu.static.Url
 import com.dech53.dao_yu.ui.theme.Dao_yuTheme
 import com.dech53.dao_yu.utils.DownloadImageFromUrl
 import kotlinx.coroutines.launch
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 
 class ImageViewer : ComponentActivity() {
 
@@ -72,15 +74,7 @@ fun ImageViewer(img_Location: String = "", onFinish: () -> Unit) {
     val context = LocalContext.current
     var isLoading by remember { mutableStateOf(false) }
     var loadSuccess by remember { mutableStateOf(false) }
-    val imageLoader = remember{ImageLoader.Builder(context)
-        .components {
-            if (SDK_INT >= 28) {
-                add(AnimatedImageDecoder.Factory())
-            } else {
-                add(GifDecoder.Factory())
-            }
-        }
-        .build()}
+    val imageLoader = Injekt.get<ImageLoader>()
     val items = listOf(
         PopUpDialogItem(
             title = "保存",

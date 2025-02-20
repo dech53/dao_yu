@@ -29,8 +29,7 @@ import coil3.gif.GifDecoder
 import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.crossfade
-import com.dech53.dao_yu.dao.CookieDatabase
-import com.dech53.dao_yu.dao.FavoriteDataBase
+import coil3.util.DebugLogger
 import com.dech53.dao_yu.ui.theme.Dao_yuTheme
 import com.dech53.dao_yu.viewmodels.ThreadInfoView_ViewModel
 import com.dech53.dao_yu.views.ImageView
@@ -38,21 +37,15 @@ import com.dech53.dao_yu.views.TRView
 import okhttp3.OkHttpClient
 
 class ThreadAndReplyView : ComponentActivity() {
-    val favDbDao by lazy {
-        FavoriteDataBase.getDatabase(applicationContext)
-    }
     private val viewModel by viewModels<ThreadInfoView_ViewModel>(
         factoryProducer = {
             object : ViewModelProvider.Factory {
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return ThreadInfoView_ViewModel(db.cookieDao, favDbDao.favoriteDao) as T
+                    return ThreadInfoView_ViewModel() as T
                 }
             }
         }
     )
-    private val db by lazy {
-        CookieDatabase.getDatabase(applicationContext)
-    }
 
     override fun onDestroy() {
         super.onDestroy()
@@ -64,7 +57,6 @@ class ThreadAndReplyView : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-
         val threadId = intent.getStringExtra("threadId")
         val hash = intent.getStringExtra("hash")
         viewModel.isFaved.value = intent.getBooleanExtra("hasId", false)
@@ -72,36 +64,6 @@ class ThreadAndReplyView : ComponentActivity() {
         setContent {
             Dao_yuTheme {
                 val context = LocalContext.current
-                val imageLoader = remember {
-                    ImageLoader.Builder(context)
-                        .memoryCache {
-                            MemoryCache.Builder()
-                                .maxSizePercent(context, 0.25)
-                                .build()
-                        }
-                        .diskCache {
-                            DiskCache.Builder()
-                                .directory(context.cacheDir.resolve("image_cache"))
-                                .maxSizePercent(0.2)
-                                .build()
-                        }
-                        .components {
-                            add(
-                                OkHttpNetworkFetcherFactory(
-                                    callFactory = {
-                                        OkHttpClient()
-                                    }
-                                )
-                            )
-                            if (SDK_INT >= 28) {
-                                add(AnimatedImageDecoder.Factory())
-                            } else {
-                                add(GifDecoder.Factory())
-                            }
-                        }
-                        .crossfade(true)
-                        .build()
-                }
                 val navController = rememberNavController()
                 SharedTransitionLayout {
                     NavHost(
@@ -121,7 +83,6 @@ class ThreadAndReplyView : ComponentActivity() {
                                 backAction = {
                                     onBackPressedDispatcher.onBackPressed()
                                 },
-                                imageLoader,
                                 animatedVisibilityScope = this,
                                 sharedTransitionScope = this@SharedTransitionLayout
                             )
@@ -149,7 +110,6 @@ class ThreadAndReplyView : ComponentActivity() {
                                 quitClick = {
                                     navController.popBackStack()
                                 },
-                                imageLoader = imageLoader,
                                 animatedVisibilityScope = this,
                                 sharedTransitionScope = this@SharedTransitionLayout
                             )

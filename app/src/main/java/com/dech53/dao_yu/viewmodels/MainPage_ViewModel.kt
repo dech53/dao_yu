@@ -2,7 +2,6 @@ package com.dech53.dao_yu.viewmodels
 
 import android.util.Log
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -15,13 +14,17 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.dech53.dao_yu.models.*
-import com.dech53.dao_yu.static.Forum
 import com.dech53.dao_yu.static.ForumSort
 import com.dech53.dao_yu.static.TimeLine
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 
-class MainPage_ViewModel(private val cookieDao: CookieDao, private val favDao: FavoriteDao) :
+class MainPage_ViewModel(
+    private val cookieDao: CookieDao = Injekt.get(),
+    private val favDao: FavoriteDao = Injekt.get()
+) :
     ViewModel() {
     private val _dataState = mutableStateListOf<Thread>()
     val dataState: List<Thread> get() = _dataState

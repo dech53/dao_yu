@@ -3,6 +3,7 @@ package com.dech53.dao_yu.utils
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import android.webkit.CookieManager
 import com.dech53.dao_yu.models.QuoteRef
 import com.dech53.dao_yu.models.Thread
 import com.dech53.dao_yu.models.emptyQuoteRefWithContent

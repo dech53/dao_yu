@@ -87,4 +87,8 @@ dependencies {
     //chart
     implementation ("co.yml:ycharts:2.1.0")
 
+
+    //dependency inject
+    implementation("uy.kohesive.injekt:injekt-core:1.16.1")
+    implementation("uy.kohesive.injekt:injekt-api:1.16.1")
 }

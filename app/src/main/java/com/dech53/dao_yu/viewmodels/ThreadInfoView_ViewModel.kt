@@ -20,16 +20,16 @@ import com.dech53.dao_yu.models.Reply
 import com.dech53.dao_yu.models.preLoadImage
 import com.dech53.dao_yu.models.toReplies
 import com.dech53.dao_yu.utils.Http_request
-import com.dech53.dao_yu.utils.JudgeHtmlResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 
-class ThreadInfoView_ViewModel(private val cookieDao: CookieDao, private val favDao: FavoriteDao) :
+class ThreadInfoView_ViewModel(private val cookieDao: CookieDao= Injekt.get(), private val favDao: FavoriteDao= Injekt.get()) :
     ViewModel() {
     private val _threadInfo = mutableStateOf<Set<Reply>>(LinkedHashSet())
     var threadInfo: State<Set<Reply>> = _threadInfo

@@ -122,6 +122,8 @@ import coil3.compose.AsyncImagePainter
 import com.dech53.dao_yu.component.CustomExposedDropMenu
 import com.dech53.dao_yu.static.xDaoPhrases
 import kotlinx.coroutines.delay
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -131,7 +133,7 @@ fun TRView(
     changeState: (Boolean) -> Unit,
     onImageClick: (String,Int) -> Unit,
     backAction:()->Unit,
-    imageLoader: ImageLoader,
+    imageLoader: ImageLoader = Injekt.get(),
     animatedVisibilityScope: AnimatedVisibilityScope,
     sharedTransitionScope: SharedTransitionScope
 ) {
@@ -683,13 +685,13 @@ fun TRView(
                                             }
                                         }
                                         val imageModifier = if (viewModel.isRaw.value) {
-                                            Modifier.aspectRatio(imageWidth.toFloat() / imageHeight.toFloat())
-                                        } else {
-                                            Modifier.size(
-                                                width = imageWidth.dp,
-                                                height = imageHeight.dp
-                                            )
-                                        }
+                                                Modifier.aspectRatio(imageWidth.toFloat() / imageHeight.toFloat())
+                                            } else {
+                                                Modifier.size(
+                                                    width = imageWidth.dp,
+                                                    height = imageHeight.dp
+                                                )
+                                            }
                                         Card(
                                             colors = CardDefaults.cardColors(
                                                 containerColor = MaterialTheme.colorScheme.surfaceContainer,
@@ -873,7 +875,7 @@ fun TRView(
                                                                     }
                                                                     is AsyncImagePainter.State.Loading -> {
                                                                         Box(
-                                                                            modifier = Modifier.fillMaxSize(),
+                                                                            modifier = imageModifier,
                                                                             contentAlignment = Alignment.Center
                                                                         ) {
                                                                             CircularProgressIndicator(

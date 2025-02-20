@@ -90,6 +90,7 @@ import coil3.gif.GifDecoder
 import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.crossfade
+import coil3.util.DebugLogger
 import com.dech53.dao_yu.component.ForumCategoryDialog
 import com.dech53.dao_yu.component.MainButtonItems
 import com.dech53.dao_yu.component.PullToRefreshLazyColumn
@@ -116,20 +117,16 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 
 class MainActivity : ComponentActivity() {
     private val scope = CoroutineScope(Dispatchers.IO)
-    val favDbDao by lazy {
-        FavoriteDataBase.getDatabase(applicationContext)
-    }
-    private val cookieDb by lazy {
-        CookieDatabase.getDatabase(applicationContext)
-    }
     private val viewModel by viewModels<MainPage_ViewModel>(
         factoryProducer = {
             object : ViewModelProvider.Factory {
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return MainPage_ViewModel(cookieDb.cookieDao, favDbDao.favoriteDao) as T
+                    return MainPage_ViewModel() as T
                 }
             }
         }
@@ -137,6 +134,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (!isTaskRoot) {
+            finish()
+            return
+        }
+
         enableEdgeToEdge()
         setContent {
             Dao_yuTheme {
@@ -358,38 +360,10 @@ fun Main_Screen(viewModel: MainPage_ViewModel, cookie: Cookie?) {
     var showBottomSheet by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    val imageLoader = remember {
-        ImageLoader.Builder(context)
-            .memoryCache {
-                MemoryCache.Builder()
-                    .maxSizePercent(context, 0.25)
-                    .build()
-            }
-            .diskCache {
-                DiskCache.Builder()
-                    .directory(context.cacheDir.resolve("image_cache"))
-                    .maxSizePercent(0.2)
-                    .build()
-            }
-            .components {
-                add(
-                    OkHttpNetworkFetcherFactory(
-                        callFactory = {
-                            OkHttpClient()
-                        }
-                    )
-                )
-                if (SDK_INT >= 28) {
-                    add(AnimatedImageDecoder.Factory())
-                } else {
-                    add(GifDecoder.Factory())
-                }
-            }
-            .crossfade(true)
-            .build()
-    }
+    val imageLoader = Injekt.get<ImageLoader>()
     ModalNavigationDrawer(
         drawerState = drawerState,
+        gesturesEnabled = !isImageScreen,
         drawerContent = {
             ModalDrawerSheet(modifier = Modifier.width(280.dp)) {
                 Text("菜单", modifier = Modifier.padding(22.dp))
@@ -467,6 +441,23 @@ fun Main_Screen(viewModel: MainPage_ViewModel, cookie: Cookie?) {
                 if (!isImageScreen)
                     @OptIn(ExperimentalMaterial3Api::class)
                     TopAppBar(
+                        actions = {
+                            IconButton(
+                                onClick = {
+                                    imageLoader.diskCache?.clear()
+                                    Toast.makeText(
+                                        context,
+                                        "缓存清理成功(っ˘Д˘)ノ",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = ImageVector.vectorResource(id = R.drawable.baseline_clear_all_24),
+                                    contentDescription = "清除缓存"
+                                )
+                            }
+                        },
                         modifier = Modifier
                             .shadow(elevation = 10.dp),
                         title = { Text(text = title) },
@@ -653,9 +644,8 @@ fun Main_Screen(viewModel: MainPage_ViewModel, cookie: Cookie?) {
                                 topBottomVisible.value = true
                                 navController.popBackStack()
                             },
-                            imageLoader = imageLoader,
                             animatedVisibilityScope = this,
-                            sharedTransitionScope = this@SharedTransitionLayout
+                            sharedTransitionScope = this@SharedTransitionLayout,
                         )
                     }
                 }
