@@ -2,8 +2,8 @@ package com.dech53.dao_yu.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.dech53.dao_yu.dao.CookieDao
 import com.dech53.dao_yu.dao.CookieEvent
+import com.dech53.dao_yu.dao.DataBaseRepository
 import com.dech53.dao_yu.models.Cookie
 import com.dech53.dao_yu.static.CookieState
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,7 +14,7 @@ import uy.kohesive.injekt.api.get
 
 
 class CookieViewModel(
-    private val cookieDao: CookieDao = Injekt.get()
+    private val repo: DataBaseRepository = Injekt.get()
 ) : ViewModel() {
     val state = MutableStateFlow(CookieState())
 
@@ -33,13 +33,13 @@ class CookieViewModel(
                     isToVerify = isToVerify
                 )
                 viewModelScope.launch {
-                    cookieDao.insert(newCookie)
+                    repo.insertCookie(newCookie)
                 }
             }
 
             CookieEvent.GetCookies -> {
                 viewModelScope.launch {
-                    cookieDao.getAll().collect { cookies ->
+                    repo.getFlowOfCookie().collect { cookies ->
                         state.update {
                             it.copy(
                                 cookies = cookies
@@ -67,13 +67,13 @@ class CookieViewModel(
 
             is CookieEvent.DeleteCookie -> {
                 viewModelScope.launch {
-                    cookieDao.delete(Cookie(0, event.cookie, ""))
+                    repo.deleteCookie(Cookie(0, event.cookie, ""))
                 }
             }
 
             CookieEvent.GetHashToVerify -> {
                 viewModelScope.launch {
-                    val cookie = cookieDao.getHashToVerify()
+                    val cookie = repo.getHashToVerify()
                     state.update {
                         it.copy(
                             isToVerify = cookie.isToVerify,
@@ -94,7 +94,7 @@ class CookieViewModel(
 
             is CookieEvent.SetVerifyCookie -> {
                 viewModelScope.launch {
-                    cookieDao.setVerifyCookie(event.cookie)
+                    repo.setVerifyCookie(event.cookie)
                 }
             }
         }

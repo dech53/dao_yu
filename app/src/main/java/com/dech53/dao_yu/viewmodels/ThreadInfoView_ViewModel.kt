@@ -11,8 +11,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.dech53.dao_yu.dao.CookieDao
-import com.dech53.dao_yu.dao.FavoriteDao
+import com.dech53.dao_yu.dao.DataBaseRepository
 import com.dech53.dao_yu.models.Cookie
 import com.dech53.dao_yu.models.Favorite
 import com.dech53.dao_yu.models.QuoteRef
@@ -29,7 +28,7 @@ import kotlinx.coroutines.withContext
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
-class ThreadInfoView_ViewModel(private val cookieDao: CookieDao= Injekt.get(), private val favDao: FavoriteDao= Injekt.get()) :
+class ThreadInfoView_ViewModel(private val repo:DataBaseRepository = Injekt.get()) :
     ViewModel() {
     private val _threadInfo = mutableStateOf<Set<Reply>>(LinkedHashSet())
     var threadInfo: State<Set<Reply>> = _threadInfo
@@ -37,7 +36,7 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao= Injekt.get(), p
     fun deleteFav(fav: Favorite) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                favDao.delete(fav)
+                repo.deleteFav(fav)
             }
         }
     }
@@ -48,7 +47,7 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao= Injekt.get(), p
     fun addFave(fav: Favorite) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                favDao.insert(fav)
+                repo.insertFav(fav)
             }
         }
     }
@@ -83,7 +82,7 @@ class ThreadInfoView_ViewModel(private val cookieDao: CookieDao= Injekt.get(), p
     fun initCookieList() {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                cookieDao.getAll().collect { cookies ->
+                repo.getFlowOfCookie().collect { cookies ->
                     cookieList.value = cookies
                 }
             }

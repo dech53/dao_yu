@@ -7,8 +7,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.dech53.dao_yu.dao.CookieDao
-import com.dech53.dao_yu.dao.FavoriteDao
+import com.dech53.dao_yu.dao.DataBaseRepository
 import com.dech53.dao_yu.utils.Http_request
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -22,12 +21,13 @@ import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
 class MainPage_ViewModel(
-    private val cookieDao: CookieDao = Injekt.get(),
-    private val favDao: FavoriteDao = Injekt.get()
+    private val repo:DataBaseRepository = Injekt.get()
 ) :
     ViewModel() {
     private val _dataState = mutableStateListOf<Thread>()
     val dataState: List<Thread> get() = _dataState
+
+    var cookie = mutableStateOf<Cookie?>(null)
 
 
     var isThread = mutableStateOf(false)
@@ -48,7 +48,7 @@ class MainPage_ViewModel(
     fun insertFav(fav: Favorite) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                favDao.insert(fav)
+                repo.insertFav(fav)
             }
         }
     }
@@ -63,7 +63,7 @@ class MainPage_ViewModel(
     fun getAllFav() {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                favDao.getAll().collect { newFavorites ->
+                repo.getFlowOfFav().collect { newFavorites ->
                     _favorites.value = newFavorites
                 }
             }
@@ -73,7 +73,7 @@ class MainPage_ViewModel(
     fun deleteFav(fav: Favorite) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                favDao.delete(fav)
+                repo.deleteFav(fav)
             }
         }
     }
@@ -93,11 +93,10 @@ class MainPage_ViewModel(
 //    private val cookieDao = db.cookieDao
 //
 
-    var cookie = mutableStateOf<Cookie?>(null)
     fun initHash() {
         viewModelScope.launch(Dispatchers.IO) {
             withContext(Dispatchers.IO) {
-                val hash = cookieDao.getHashToVerify()
+                val hash = repo.getHashToVerify()
                 withContext(Dispatchers.Main) {
                     cookie.value = hash
                 }
