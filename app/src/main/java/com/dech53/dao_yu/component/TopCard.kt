@@ -2,21 +2,27 @@
 
 package com.dech53.dao_yu.component
 
+import android.content.Context
 import android.util.Log
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.BoundsTransform
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -24,10 +30,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -56,6 +64,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.DpOffset
 import coil3.ImageLoader
+import coil3.compose.AsyncImagePainter
 import coil3.compose.SubcomposeAsyncImage
 import coil3.disk.DiskCache
 import coil3.disk.directory
@@ -71,12 +80,15 @@ import com.dech53.dao_yu.static.Url
 import com.dech53.dao_yu.static.dropDownItemsList
 import com.dech53.dao_yu.static.forumMap
 import com.dech53.dao_yu.ui.theme.shimmerEffect
+import com.dech53.dao_yu.utils.RegexRepo
 import com.dech53.dao_yu.viewmodels.MainPage_ViewModel
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 
 @Composable
 fun Forum_card(
     thread: Thread,
-    imgClickAction: (String,Int) -> Unit,
+    imgClickAction: (String, Int) -> Unit,
     cardClickAction: () -> Unit,
     cardLongClickAction: (String) -> Unit,
     stricted: Boolean,
@@ -86,61 +98,41 @@ fun Forum_card(
     forumCategoryId: String,
     favClickAction: (Boolean) -> Unit,
     viewModel: MainPage_ViewModel,
-    isFaved:Boolean,
-    imageLoader:ImageLoader,
+    isFaved: Boolean,
+    imageLoader: ImageLoader,
     animatedVisibilityScope: AnimatedVisibilityScope,
     sharedTransitionScope: SharedTransitionScope
 ) {
-    val dateRegex = Regex(pattern = "[^(]*|(?<=\\))[^)]*")
-    val replace_ = Regex(pattern = "-")
-    val calculatedDate by remember(thread.now) {
+    val context = LocalContext.current
+
+    val calculatedDate by rememberSaveable(thread.now) {
         mutableStateOf(
-            replace_.replace(dateRegex.find(thread.now)!!.value, "/")
+            RegexRepo.replace_.replace(RegexRepo.dateRegex.find(thread.now)!!.value, "/")
         )
     }
 
-    val time_ by remember(thread.now) {
+    val time_ by rememberSaveable(thread.now) {
         mutableStateOf(
-            Regex("""\d{2}:\d{2}:\d{2}$""").find(thread.now)!!.value,
+            RegexRepo.time_.find(thread.now)!!.value,
         )
     }
 
     val density = LocalDensity.current
     val key = Url.IMG_THUMB_QA + thread.img + thread.ext
     val imageInfo = viewModel.imgList[key]
-    var imageWidth = imageInfo?.width ?: 200
-    var imageHeight = imageInfo?.height ?: 200
+    val imageWidth = imageInfo?.width ?: 0
+    val imageHeight = imageInfo?.height ?: 0
 
-    val context = LocalContext.current
-    val request = remember {
+    val request = remember(key) {
         ImageRequest.Builder(context)
-            .data(Url.IMG_THUMB_QA + thread.img + thread.ext)
+            .data(key)
             .memoryCachePolicy(CachePolicy.ENABLED)
             .diskCachePolicy(CachePolicy.ENABLED)
             .placeholderMemoryCacheKey(key = "${thread.id}image/${thread.img}${thread.ext}false")
             .memoryCacheKey(key = "${thread.id}image/${thread.img}${thread.ext}false")
             .build()
     }
-    LaunchedEffect(Unit) {
-        if (thread.img != "") {
-            val imageUrl = Url.IMG_THUMB_QA + thread.img + thread.ext
-            if (!viewModel.imgList.containsKey(imageUrl)) {
-                val bitmap = imageLoader.execute(request).image?.toBitmap()
-                if (bitmap != null) {
-                    imageWidth = bitmap.width
-                    imageHeight = bitmap.height
-                    synchronized(viewModel.imgList) {
-                        viewModel.imgList[imageUrl] = preLoadImage(height = bitmap.height, width = bitmap.width)
-                    }
-                    Log.d("TRA", "Image dimensions fetched: width=${imageWidth}, height=${imageHeight}")
-                } else {
-                    Log.e("TRA", "Failed to load image: $imageUrl")
-                }
-            }
-        }
-    }
-
-    var isContextVisible by rememberSaveable { mutableStateOf(false) }
+    var isContextVisible by remember { mutableStateOf(false) }
     var itemHeight by remember { mutableStateOf(0.dp) }
     var itemWidth by remember { mutableStateOf(0.dp) }
     Card(
@@ -155,18 +147,10 @@ fun Forum_card(
             .onGloballyPositioned { layoutCoordinates ->
                 itemHeight = with(density) { layoutCoordinates.size.height.toDp() }
             }
-            .pointerInput(true) {
-                detectTapGestures(
-                    onTap = {
-                        cardClickAction()
-                    },
-                    onLongPress = {
-                        itemWidth = it.x.toDp()
-                        itemHeight = it.y.toDp()
-                        isContextVisible = true
-                    }
-                )
+            .clickable {
+                cardClickAction()
             }
+            .animateContentSize()
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(
@@ -241,37 +225,76 @@ fun Forum_card(
                 htmlContent = thread.content,
                 maxLines = if (stricted) 10 else Int.MAX_VALUE
             )
-
             if (thread.img != "") {
-                Spacer(modifier = Modifier.height(10.dp))
                 with(sharedTransitionScope) {
                     SubcomposeAsyncImage(
                         imageLoader = imageLoader,
                         model = request,
                         contentDescription = null,
-                        loading = {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth(0.5f)
-                                    .height(imageHeight.dp)
-                                    .shimmerEffect()
-                            ) {
-                            }
-                        },
-                        modifier = Modifier
-                            .size(width = imageWidth.dp, height = imageHeight.dp)
-                            .clickable {
-                                imgClickAction(thread.img + thread.ext, thread.id)
-                            }.sharedElement(
-                                rememberSharedContentState(key = "${thread.id}image/${thread.img}${thread.ext}"),
-                                animatedVisibilityScope = animatedVisibilityScope,
-                                boundsTransform = BoundsTransform { initialBounds, targetBounds ->
-                                    tween(durationMillis = 200)
-                                }
-                            ),
                         contentScale = ContentScale.Fit,
-                        alignment = Alignment.CenterStart
-                    )
+                        alignment = Alignment.CenterStart,
+                        modifier = Modifier
+                            .clickable(
+                                indication = rememberRipple(
+                                    bounded = true
+                                ),
+                                interactionSource = remember { MutableInteractionSource() }
+                            ) {
+                                imgClickAction(thread.img + thread.ext, thread.id)
+                            }
+                    ) {
+                        val painter =
+                            this@SubcomposeAsyncImage.painter
+                        val state by painter.state.collectAsState()
+
+                        when (state) {
+                            AsyncImagePainter.State.Empty -> {}
+                            is AsyncImagePainter.State.Error -> {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("加载失败")
+                                }
+                            }
+
+                            is AsyncImagePainter.State.Loading -> {
+                                Box(
+                                    modifier = Modifier.size(
+                                        width = imageWidth.dp,
+                                        height = imageHeight.dp
+                                    ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+
+                            is AsyncImagePainter.State.Success -> {
+                                Image(
+                                    painter = painter,
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .size(
+                                            width = imageWidth.dp,
+                                            height = imageHeight.dp
+                                        )
+                                        .sharedElement(
+                                            state = rememberSharedContentState(
+                                                key = "${thread.id}image/${thread.img}${thread.ext}"
+                                            ),
+                                            animatedVisibilityScope = animatedVisibilityScope,
+                                            boundsTransform = BoundsTransform { initialBounds, targetBounds ->
+                                                tween(durationMillis = 200)
+                                            }
+                                        ),
+                                    contentScale = ContentScale.Fit
+                                )
+                            }
+                        }
+                    }
                 }
             }
             if ((mainForumId in listOf("1", "2", "3")) && forumCategoryId == "999") {
@@ -325,22 +348,24 @@ fun Forum_card(
                 Row {
                     BadgedBox(
                         badge = {
-                            if (thread.ReplyCount > 0) {
-                                Badge(
-                                    modifier = Modifier
-                                        .align(Alignment.TopEnd)
-                                        .padding(top = 4.dp, end = 4.dp)
-                                        .border(width = 0.5.dp, color = MaterialTheme.colorScheme.primary, shape = CircleShape)
-                                        .clip(CircleShape),
-                                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                                    contentColor = MaterialTheme.colorScheme.primary,
-                                ) {
-                                    Text(
-                                        text = if(thread.ReplyCount >= 999) "999+" else thread.ReplyCount.toString(),
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold
+                            Badge(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(top = 4.dp, end = 4.dp)
+                                    .border(
+                                        width = 0.5.dp,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        shape = CircleShape
                                     )
-                                }
+                                    .clip(CircleShape),
+                                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                contentColor = MaterialTheme.colorScheme.primary,
+                            ) {
+                                Text(
+                                    text = if (thread.ReplyCount >= 999) "999+" else thread.ReplyCount.toString(),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
                             }
                         },
                         modifier = Modifier

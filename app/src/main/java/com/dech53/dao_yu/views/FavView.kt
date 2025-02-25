@@ -78,6 +78,8 @@ import com.dech53.dao_yu.component.ActionIcon
 import com.dech53.dao_yu.viewmodels.MainPage_ViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 import kotlin.math.roundToInt
 
 @Composable
@@ -88,7 +90,7 @@ fun FavView(
     onImageClick: (String, Int) -> Unit,
     animatedVisibilityScope: AnimatedVisibilityScope,
     sharedTransitionScope: SharedTransitionScope,
-    imageLoader: ImageLoader,
+    imageLoader: ImageLoader = Injekt.get(),
 ) {
     val data = viewModel.favData.collectAsStateWithLifecycle()
     val context = LocalContext.current

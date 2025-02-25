@@ -42,10 +42,7 @@ fun PullToRefreshLazyColumn(
     val loadMoreState = remember { mutableStateOf(false) }
     val shouldLoadMore = remember {
         derivedStateOf {
-            val layoutInfo = lazyListState.layoutInfo
-            val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()
-            val totalItems = layoutInfo.totalItemsCount
-            lastVisibleItem?.index == totalItems - 1 && !loadMoreState.value
+            lazyListState.firstVisibleItemIndex + lazyListState.layoutInfo.visibleItemsInfo.size == lazyListState.layoutInfo.totalItemsCount
         }
     }
 
@@ -64,6 +61,7 @@ fun PullToRefreshLazyColumn(
     }
 
     Box(
+        contentAlignment = Alignment.TopCenter,
         modifier = Modifier
             .nestedScroll(pullToRefreshState.nestedScrollConnection)
             .padding(contentPadding)
@@ -73,14 +71,13 @@ fun PullToRefreshLazyColumn(
         ) {
             LazyColumn(
                 state = lazyListState,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
             ) {
                 itemsIndexed(
-                    items = items,
+                     items = items,
                     key = { index, item -> "${item.id}${index}" }
                 ) { index, item ->
                     key("${item.id}${index}") {
-
                         content(item)
                     }
                 }

@@ -1,8 +1,10 @@
 package com.dech53.dao_yu.models
 
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 
 @Stable
+@Immutable
 data class Thread(
     val id: Int,
     val fid: Int,

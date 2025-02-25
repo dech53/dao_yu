@@ -86,6 +86,7 @@ dependencies {
 
     //chart
     implementation ("co.yml:ycharts:2.1.0")
+    implementation("com.himanshoe:charty:1.1.3-alpha05")
 
 
     //dependency inject

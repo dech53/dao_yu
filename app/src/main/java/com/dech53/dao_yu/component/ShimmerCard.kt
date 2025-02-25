@@ -31,7 +31,7 @@ fun ShimmerList(
     contentAfterLoading:@Composable ()->Unit,
     skeletonContent:@Composable ()->Unit,
     modifier: Modifier,
-    amount:Int = 5
+    amount:Int = 3
 ){
     if (isLoading){
         Column (

@@ -1,5 +1,10 @@
 package com.dech53.dao_yu.models
 
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
+
+@Immutable
+@Stable
 data class QuoteRef(
     val id: Long,
     val img: String,

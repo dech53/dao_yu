@@ -2,7 +2,11 @@
 
 package com.dech53.dao_yu
 
+import android.content.ClipboardManager
+import android.content.ClipboardManager.OnPrimaryClipChangedListener
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -58,12 +62,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.LifecycleStartEffect
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -109,13 +120,9 @@ class MainActivity : ComponentActivity() {
         }
     )
 
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (!isTaskRoot) {
-            finish()
-            return
-        }
-
         enableEdgeToEdge()
         setContent {
             Dao_yuTheme {
@@ -132,8 +139,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        lifecycleScope.launch {
-            viewModel.initHash()
+        scope.launch {
+            withContext(Dispatchers.IO) {
+                viewModel.initHash()
+            }
         }
     }
 }
@@ -144,19 +153,36 @@ fun Main_Page(
     padding: PaddingValues,
     viewModel: MainPage_ViewModel,
     cookie: Cookie?,
-    imageLoader: ImageLoader,
     onImageClick: (String, Int) -> Unit,
     animatedVisibilityScope: AnimatedVisibilityScope,
-    sharedTransitionScope: SharedTransitionScope
+    sharedTransitionScope: SharedTransitionScope,
+    imageLoader:ImageLoader = Injekt.get()
+//    lifecycleOwner: LifecycleOwner = LocalLifecycleOwner.current
 ) {
+    val context = LocalContext.current
+//    val clipBoard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     val dataState = viewModel.dataState
     val isRefreshing by remember { viewModel.isRefreshing }
     val interactionSource = remember { MutableInteractionSource() }
     val lazyListState = viewModel.mainPageListState
     val favorites by viewModel.favData.collectAsState()
-    val context = LocalContext.current
     val onError by remember { viewModel.onError }
     val scope = rememberCoroutineScope()
+
+//    DisposableEffect(lifecycleOwner) {
+//        val observer = LifecycleEventObserver { _, event ->
+//            if (event == Lifecycle.Event.ON_RESUME || event == Lifecycle.Event.ON_START) {
+//                val currentClipData = clipBoard.primaryClip?.getItemAt(0)?.text ?: ""
+//                if (currentClipData.isNotEmpty() && currentClipData.contains("https://www.nmbxd1.com/t/")) {
+//                    Toast.makeText(context, "似乎存在串号", Toast.LENGTH_SHORT).show()
+//                }
+//            }
+//        }
+//        lifecycleOwner.lifecycle.addObserver(observer)
+//        onDispose {
+//            lifecycleOwner.lifecycle.removeObserver(observer)
+//        }
+//    }
 
 //    LaunchedEffect(Unit) {
 //        snapshotFlow { dataState.size }
@@ -177,7 +203,7 @@ fun Main_Page(
                     interactionSource = interactionSource,
                     indication = null
                 ) {
-                    viewModel.loadData()
+                    viewModel.loadData(context)
                 },
             contentAlignment = Alignment.Center,
         ) {
@@ -206,7 +232,7 @@ fun Main_Page(
                     var visible = remember { mutableStateOf(false) }
 
                     PullToRefreshLazyColumn(
-                        items = dataState!!,
+                        items = dataState,
                         lazyListState = lazyListState,
                         content = { item ->
                             Forum_card(
@@ -294,7 +320,7 @@ fun Main_Page(
                         },
                         contentPadding = padding,
                         loadMore = { onComplete ->
-                            viewModel.loadMore(onComplete)
+                            viewModel.loadMore(onComplete,context)
                         }
                     )
                 }
@@ -318,14 +344,14 @@ fun Main_Screen(viewModel: MainPage_ViewModel, cookie: Cookie?) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     val isImageScreen = currentRoute?.startsWith("image/") == true
-
+    val context = LocalContext.current
 
     val title by remember { viewModel.title }
     LaunchedEffect(true) {
 
         withContext(Dispatchers.IO) {
             delay(100)
-            viewModel.loadData()
+            viewModel.loadData(context)
         }
     }
 
@@ -336,7 +362,7 @@ fun Main_Screen(viewModel: MainPage_ViewModel, cookie: Cookie?) {
     var isCookieChooseExpanded by remember { mutableStateOf(false) }
     var showBottomSheet by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
+
     val imageLoader = Injekt.get<ImageLoader>()
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -576,7 +602,6 @@ fun Main_Screen(viewModel: MainPage_ViewModel, cookie: Cookie?) {
                             },
                             animatedVisibilityScope = this,
                             sharedTransitionScope = this@SharedTransitionLayout,
-                            imageLoader = imageLoader
                         )
                     }
                     composable("设置") { SettingsView(padding = innerPadding) }
@@ -591,7 +616,6 @@ fun Main_Screen(viewModel: MainPage_ViewModel, cookie: Cookie?) {
                             },
                             animatedVisibilityScope = this,
                             sharedTransitionScope = this@SharedTransitionLayout,
-                            imageLoader = imageLoader
                         )
                     }
                     composable("统计") {

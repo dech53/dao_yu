@@ -14,8 +14,10 @@ import androidx.lifecycle.viewModelScope
 import com.dech53.dao_yu.dao.DataBaseRepository
 import com.dech53.dao_yu.models.Cookie
 import com.dech53.dao_yu.models.Favorite
+import com.dech53.dao_yu.models.PostAction
 import com.dech53.dao_yu.models.QuoteRef
 import com.dech53.dao_yu.models.Reply
+import com.dech53.dao_yu.models.ReplyAction
 import com.dech53.dao_yu.models.preLoadImage
 import com.dech53.dao_yu.models.toReplies
 import com.dech53.dao_yu.utils.Http_request
@@ -28,7 +30,7 @@ import kotlinx.coroutines.withContext
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
-class ThreadInfoView_ViewModel(private val repo:DataBaseRepository = Injekt.get()) :
+class ThreadInfoView_ViewModel(private val repo: DataBaseRepository = Injekt.get()) :
     ViewModel() {
     private val _threadInfo = mutableStateOf<Set<Reply>>(LinkedHashSet())
     var threadInfo: State<Set<Reply>> = _threadInfo
@@ -42,12 +44,28 @@ class ThreadInfoView_ViewModel(private val repo:DataBaseRepository = Injekt.get(
     }
 
 
+    fun addReply(reply:ReplyAction){
+        viewModelScope.launch {
+            withContext(Dispatchers.IO){
+                repo.insertReply(reply)
+            }
+        }
+    }
+
     val imgList = mutableStateMapOf<String, preLoadImage>()
 
     fun addFave(fav: Favorite) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 repo.insertFav(fav)
+            }
+        }
+    }
+
+    fun addPosted(postAction: PostAction) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                repo.insertPost(postAction)
             }
         }
     }
@@ -88,7 +106,8 @@ class ThreadInfoView_ViewModel(private val repo:DataBaseRepository = Injekt.get(
             }
         }
     }
-    init{
+
+    init {
         initCookieList()
     }
 
@@ -141,7 +160,7 @@ class ThreadInfoView_ViewModel(private val repo:DataBaseRepository = Injekt.get(
                 newData.toReplies().map { it.toQuoteRef() }
                     .forEach { quoteRef ->
                         contentContext[quoteRef.id.toString()] = quoteRef
-                        if (quoteRef.id.toInt() == 9999999){
+                        if (quoteRef.id.toInt() == 9999999) {
                             tipsCount.value++
                         }
                     }

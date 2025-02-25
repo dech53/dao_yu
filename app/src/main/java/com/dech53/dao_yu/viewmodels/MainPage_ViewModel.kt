@@ -1,12 +1,19 @@
 package com.dech53.dao_yu.viewmodels
 
+import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import co.yml.charts.common.extensions.isNotNull
+import coil3.ImageLoader
+import coil3.request.ImageRequest
+import coil3.toBitmap
 import com.dech53.dao_yu.dao.DataBaseRepository
 import com.dech53.dao_yu.utils.Http_request
 import kotlinx.coroutines.Dispatchers
@@ -15,13 +22,15 @@ import kotlinx.coroutines.withContext
 import com.dech53.dao_yu.models.*
 import com.dech53.dao_yu.static.ForumSort
 import com.dech53.dao_yu.static.TimeLine
+import com.dech53.dao_yu.static.Url
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
 class MainPage_ViewModel(
-    private val repo:DataBaseRepository = Injekt.get()
+    private val repo: DataBaseRepository = Injekt.get(),
+    private val imageLoader: ImageLoader = Injekt.get(),
 ) :
     ViewModel() {
     private val _dataState = mutableStateListOf<Thread>()
@@ -56,6 +65,7 @@ class MainPage_ViewModel(
     fun hasId(id: String): Boolean {
         return _favorites.value.any { it.id == id }
     }
+
 
     private val _favorites = MutableStateFlow<List<Favorite>>(emptyList())
     val favData: StateFlow<List<Favorite>> = _favorites
@@ -149,10 +159,10 @@ class MainPage_ViewModel(
         }
     }
 
-    var imgList = mutableStateMapOf<String, preLoadImage>()
+    val imgList = mutableStateMapOf<String, preLoadImage>()
 
     // initial request
-    fun loadData() {
+    fun loadData(context: Context) {
         isRefreshing.value = true
         viewModelScope.launch {
             try {
@@ -163,6 +173,20 @@ class MainPage_ViewModel(
                             if (!isThread.value) "showf?id=${forumId.value}" else "timeline?id=${forumId.value}",
                             cookie.value?.cookie ?: ""
                         )
+                    }
+                    data?.forEach {
+                        if (it.img.isNotNull()) {
+                            val key = Url.IMG_THUMB_QA + it.img + it.ext
+                            if (!imgList.containsKey(key)) {
+                                val request = ImageRequest.Builder(context)
+                                    .data(key)
+                                    .build()
+                                val bitmap = imageLoader.execute(request).image?.toBitmap()
+                                if (bitmap != null) {
+                                    imgList[key] = preLoadImage(bitmap.height, bitmap.width)
+                                }
+                            }
+                        }
                     }
                     withContext(Dispatchers.Main) {
                         isInitialLoad.value = false
@@ -240,7 +264,7 @@ class MainPage_ViewModel(
 //        isChangeForumIdDialogVisible.value = !isChangeForumIdDialogVisible.value
 //    }
 
-    fun loadMore(onComplete: () -> Unit) {
+    fun loadMore(onComplete: () -> Unit,context: Context) {
         Log.d("main_page加载第${pageId.value}测试", "触发")
         viewModelScope.launch {
             pageId.value++
@@ -251,6 +275,20 @@ class MainPage_ViewModel(
                         else "timeline?id=${forumId.value}&page=${pageId.value}",
                         cookie.value?.cookie ?: ""
                     )
+                }
+                newData?.forEach {
+                    if (it.img.isNotNull()) {
+                        val key = Url.IMG_THUMB_QA + it.img + it.ext
+                        if (!imgList.containsKey(key)) {
+                            val request = ImageRequest.Builder(context)
+                                .data(key)
+                                .build()
+                            val bitmap = imageLoader.execute(request).image?.toBitmap()
+                            if (bitmap != null) {
+                                imgList[key] = preLoadImage(bitmap.height, bitmap.width)
+                            }
+                        }
+                    }
                 }
                 withContext(Dispatchers.Main) {
                     isInitialLoad.value = true

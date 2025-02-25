@@ -2,6 +2,7 @@ package com.dech53.dao_yu
 
 import android.app.Application
 import android.os.Build.VERSION.SDK_INT
+import androidx.compose.ui.platform.ClipboardManager
 import androidx.room.Room
 import coil3.ImageLoader
 import coil3.disk.DiskCache

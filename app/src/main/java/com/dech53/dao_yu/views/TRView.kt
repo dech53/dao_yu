@@ -120,6 +120,8 @@ import androidx.compose.ui.res.painterResource
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
 import com.dech53.dao_yu.component.CustomExposedDropMenu
+import com.dech53.dao_yu.models.PostAction
+import com.dech53.dao_yu.models.ReplyAction
 import com.dech53.dao_yu.static.xDaoPhrases
 import kotlinx.coroutines.delay
 import uy.kohesive.injekt.Injekt
@@ -481,6 +483,14 @@ fun TRView(
                                                 img = uri,
                                                 context = context,
                                                 onSuccess = { bool ->
+                                                    viewModel.addReply(
+                                                        ReplyAction(
+                                                            userId = cookies.filter { it.cookie == viewModel.hash.value }[0].name,
+                                                            postId = threadId,
+                                                            timestamp = System.currentTimeMillis(),
+                                                            content = viewModel.textFieldValue.value.text,
+                                                        )
+                                                    )
                                                     if (((viewModel.threadInfo.value.size - 1) % 19 != 0) && (viewModel.pageId.value >= viewModel.maxPage.value)||(viewModel.threadInfo.value.size == 1)) {
                                                         viewModel.loadMore(
                                                             "F",
@@ -497,6 +507,7 @@ fun TRView(
                                                         )
                                                     }
                                                     showBottomSheet = bool
+
                                                 }
                                             )
                                         } else {
@@ -617,7 +628,7 @@ fun TRView(
                     ShimmerList(
                         isLoading = threadInfo.isEmpty(),
                         contentAfterLoading = {
-                            val poster = threadInfo!!.first().user_hash
+                            val poster = threadInfo.first().user_hash
                             val pullToRefreshState = rememberPullToRefreshState()
                             Box(
                                 contentAlignment = Alignment.TopCenter,
@@ -950,30 +961,35 @@ fun TRView(
                                         }
                                     } else {
                                         item {
-                                            TextButton(
-                                                onClick = {
-                                                    if ((((viewModel.threadInfo.value.size - 1 - viewModel.tipsCount.value) % 19 != 0) && (viewModel.pageId.value >= viewModel.maxPage.value)) || (viewModel.threadInfo.value.size - viewModel.tipsCount.value == 1)) {
-                                                        viewModel.loadMore(
-                                                            "F",
-                                                            addPage = false,
-                                                            onComplete = {
-                                                                changeState(false)
-                                                            }
-                                                        )
-                                                    } else {
-                                                        viewModel.loadMore(
-                                                            "F", onComplete = {
-                                                                changeState(false)
-                                                            }
-                                                        )
-                                                    }
-                                                    Log.d("按钮刷新", "按钮刷新")
-                                                    changeState(true)
-                                                },
+                                            Column(
                                                 modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .height(50.dp)
-                                            ) { Text("没有更多了,刷新试试？") }
+                                                    .fillMaxWidth(),
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                verticalArrangement = Arrangement.Center
+                                            ) {
+                                                TextButton(
+                                                    onClick = {
+                                                        if ((((viewModel.threadInfo.value.size - 1 - viewModel.tipsCount.value) % 19 != 0) && (viewModel.pageId.value >= viewModel.maxPage.value)) || (viewModel.threadInfo.value.size - viewModel.tipsCount.value == 1)) {
+                                                            viewModel.loadMore(
+                                                                "F",
+                                                                addPage = false,
+                                                                onComplete = {
+                                                                    changeState(false)
+                                                                }
+                                                            )
+                                                        } else {
+                                                            viewModel.loadMore(
+                                                                "F", onComplete = {
+                                                                    changeState(false)
+                                                                }
+                                                            )
+                                                        }
+                                                        Log.d("按钮刷新", "按钮刷新")
+                                                        changeState(true)
+                                                    },
+                                                ) { Text("没有更多了,刷新试试？") }
+                                                Text("|∀ﾟ")
+                                            }
                                         }
                                     }
                                 }
